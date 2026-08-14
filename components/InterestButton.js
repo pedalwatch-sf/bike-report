@@ -6,13 +6,27 @@ import { supabase } from '../lib/supabaseClient';
 export default function InterestButton({ suggestionId, count }) {
   const [stage, setStage] = useState('idle'); // idle | collecting | done
   const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [localCount, setLocalCount] = useState(count);
 
-  async function confirm(withEmail) {
-    await supabase.from('subscribers').insert({
+  async function confirm() {
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes('@')) {
+      setError('Enter a valid email to get updates.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    const { error: insertError } = await supabase.from('subscribers').insert({
       suggestion_id: suggestionId,
-      email: withEmail && email.trim() ? email.trim() : null,
+      email: trimmed,
     });
+    setSaving(false);
+    if (insertError) {
+      setError('Something went wrong — try again.');
+      return;
+    }
     setLocalCount((c) => c + 1);
     setStage('done');
   }
@@ -33,16 +47,18 @@ export default function InterestButton({ suggestionId, count }) {
           <div className="interest-count">{localCount}</div>
           <input
             type="email"
-            placeholder="Email for updates (optional)"
+            placeholder="Your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={{ flex: 1, minWidth: 140 }}
           />
         </div>
         <div className="row" style={{ marginTop: 8 }}>
-          <button className="btn teal" onClick={() => confirm(true)}>Save</button>
-          <button className="btn outline" onClick={() => confirm(false)}>Skip email</button>
+          <button className="btn teal" onClick={confirm} disabled={saving}>
+            {saving ? 'Saving…' : 'Notify me'}
+          </button>
         </div>
+        {error && <p className="hint" style={{ color: 'var(--coral)' }}>{error}</p>}
       </div>
     );
   }
