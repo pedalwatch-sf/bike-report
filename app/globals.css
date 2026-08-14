@@ -23,7 +23,7 @@ body {
 }
 main { display: block; }
 .page-header {
-  padding: 36px 20px 28px;
+  padding: 36px 96px 28px 20px;
   border-bottom: 2px solid var(--yellow);
   position: relative;
 }
@@ -65,6 +65,10 @@ h1 {
   font-family: 'Oswald', sans-serif;
   font-weight: 700;
   font-size: 20px;
+}
+@media (max-width: 420px) {
+  .page-header { padding-right: 20px; }
+  .shield { position: static; margin-bottom: 14px; }
 }
 .tabs {
   display: flex;
