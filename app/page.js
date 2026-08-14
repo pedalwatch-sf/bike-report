@@ -67,7 +67,7 @@ export default function BrowsePage() {
     <main>
       <header className="page-header">
         <div className="shield">RT</div>
-        <p className="eyebrow">Community infrastructure survey</p>
+        <p className="eyebrow">Fixing SF's Bike Infrastructure</p>
         <h1>Route Report</h1>
         <p className="sub">
           Flag a bike lane or crossing that needs work. Approved reports go public — add your
