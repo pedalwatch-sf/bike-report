@@ -66,7 +66,7 @@ export default function BrowsePage() {
   return (
     <main>
       <header className="page-header">
-        <div className="shield">RT</div>
+        <div className="shield">SF</div>
         <p className="eyebrow">Fixing SF's Bike Infrastructure</p>
         <h1>Route Report</h1>
         <p className="sub">
