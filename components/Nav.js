@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useUser } from '../lib/useUser';
+import { useProfile } from '../lib/useProfile';
 
 export default function Nav() {
   const pathname = usePathname();
-  const user = useUser();
+  const { user, profile } = useProfile();
+  const canModerate = profile && (profile.role === 'moderator' || profile.role === 'admin');
 
   const tab = (href, label) => (
     <Link href={href} className={`tab ${pathname === href ? 'active' : ''}`}>
@@ -18,7 +19,7 @@ export default function Nav() {
     <nav className="tabs">
       {tab('/', 'Browse')}
       {tab('/submit', 'Submit')}
-      {tab('/moderate', 'Moderate')}
+      {canModerate && tab('/moderate', 'Moderate')}
       {tab('/account', user ? 'Account' : 'Sign in')}
     </nav>
   );

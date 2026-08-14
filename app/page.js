@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import Header from '../components/Header';
 import Nav from '../components/Nav';
+import InterestButton from '../components/InterestButton';
 import { supabase } from '../lib/supabaseClient';
 
 export default function BrowsePage() {
@@ -53,17 +55,6 @@ export default function BrowsePage() {
     }
   }
 
-  async function registerInterest(id) {
-    const email = window.prompt(
-      "Email for updates on this report (optional — leave blank to just register interest):"
-    );
-    await supabase.from('subscribers').insert({
-      suggestion_id: id,
-      email: email && email.trim() ? email.trim() : null,
-    });
-    loadSuggestions();
-  }
-
   return (
     <main>
       <Header subtitle="Flag a bike lane or crossing that needs work. Approved reports go public — add your name to the list and we'll track who's watching each one." />
@@ -75,17 +66,14 @@ export default function BrowsePage() {
         )}
         {suggestions.map((s) => (
           <div className="card" key={s.id}>
-            {s.image_url && <img src={s.image_url} alt="" className="card-image" />}
-            <span className="badge cat">{s.category}</span>
-            <h3>{s.title}</h3>
-            <p>{s.description}</p>
-            <div className="meta">Reported {new Date(s.submitted_at).toLocaleDateString()}</div>
-            <div className="row">
-              <div className="interest-count">{s.subscribers?.[0]?.count ?? 0}</div>
-              <button className="btn outline" onClick={() => registerInterest(s.id)}>
-                I&apos;m interested
-              </button>
-            </div>
+            <Link href={`/report/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              {s.image_url && <img src={s.image_url} alt="" className="card-image" />}
+              <span className="badge cat">{s.category}</span>
+              <h3>{s.title}</h3>
+              <p>{s.description}</p>
+              <div className="meta">Reported {new Date(s.submitted_at).toLocaleDateString()}</div>
+            </Link>
+            <InterestButton suggestionId={s.id} count={s.subscribers?.[0]?.count ?? 0} />
           </div>
         ))}
       </div>
