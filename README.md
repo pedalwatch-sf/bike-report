@@ -1,62 +1,54 @@
 # Route Report
 
-Your bike infrastructure tracker, now backed by a real database (Supabase)
-instead of the browser-only prototype. This folder is a complete, working
-website — it just needs to be put on GitHub and connected to Vercel to go
-live at a real URL.
+Your bike infrastructure tracker, backed by Supabase for the database,
+image storage, and now real user accounts.
 
-## What's already done for you
+## How access works now
 
-- The database (tables, image storage, security rules) is live in your
-  Supabase project called **bike-report**.
-- This code is already wired to that database's public URL and key —
-  nothing to configure there.
-- Browse, Submit (with photo + map pin), and Moderate (with edit, approve,
-  reject) are all built and working.
+- **Anyone** can browse approved reports.
+- **Signed-in users** can submit a report (with an optional photo) and see
+  their own submissions.
+- **Moderators** can review pending submissions, edit them, and
+  approve/reject.
+- **Admin** (that's you) approves who becomes a moderator, from a queue on
+  the Moderate page.
 
-## What you still need to do (about 10 minutes)
+There's no more shared passcode. Permissions are enforced by Supabase's
+Row Level Security rules directly on the database, based on who's signed
+in -- so there's nothing secret sitting in the code anymore.
 
-### 1. Get your two secret values
+## Deploying an update
 
-These stay out of the code and get typed into Vercel directly, so they're
-never visible to site visitors.
+Since this is already on GitHub and connected to Vercel: update the file(s)
+on GitHub (via the pencil-edit icon, or by uploading a replacement file)
+and commit. Vercel redeploys automatically within a minute or two.
 
-- Go to your Supabase project → **Settings → API**
-- Scroll to **Project API keys** and copy the one labeled **`service_role`**
-  (it's marked "secret" — that's the one you want, not the public one)
-- Also just pick any passcode you'd like to use to unlock the Moderate tab
-  (e.g. `route-2026`) — write it down, you'll type it in twice
+## Two one-time setup steps
 
-### 2. Put this code on GitHub
+### 1. Point Supabase at your live URL
 
-- Go to [github.com/new](https://github.com/new), name the repository
-  (e.g. `route-report`), keep it **Private** if you'd rather people not
-  browse your source, and click **Create repository**
-- On the next page, click **uploading an existing file**
-- Drag this entire folder's contents into the browser window (Chrome
-  supports dragging a whole folder in) and click **Commit changes**
+Auth emails (like signup confirmations) need to know where your site
+actually lives:
 
-### 3. Connect it to Vercel
+- Supabase dashboard -> Authentication -> URL Configuration
+- Set Site URL to your Vercel URL (e.g. https://route-report.vercel.app)
 
-- Go to [vercel.com/new](https://vercel.com/new) and sign in with your
-  GitHub account
-- Select the `route-report` repository and click **Import**
-- Before clicking Deploy, open **Environment Variables** and add:
-  - `SUPABASE_SERVICE_ROLE_KEY` → the secret key you copied in step 1
-  - `MODERATOR_PASSCODE` → the passcode you chose in step 1
-- Click **Deploy**
+### 2. Make yourself the admin
 
-That's it — after a minute or two, Vercel gives you a live URL
-(something like `route-report.vercel.app`) that anyone can visit. Every
-future change you want (new features, tweaks) just needs the files updated
-and pushed to GitHub — Vercel automatically redeploys.
+There's intentionally no self-serve way to become admin -- someone has to
+be the first one, manually:
 
-## Trying it locally first (optional)
+1. Go to your live site and create an account (Sign in -> Create account)
+   using the email you want to administer with
+2. Tell Claude that email address, and it'll grant that account admin
+   rights directly in the database
 
-If you want to see it running on your own computer before deploying:
+After that, your Moderate tab will show a queue of anyone who requests
+moderator access, with Approve/Deny buttons.
 
-1. Install [Node.js](https://nodejs.org) if you don't have it
-2. Copy `.env.local.example` to a new file named `.env.local` and fill in
-   your two values from step 1 above
-3. In this folder, run `npm install` then `npm run dev`
-4. Open `http://localhost:3000`
+## Cleaning up (optional)
+
+The SUPABASE_SERVICE_ROLE_KEY and MODERATOR_PASSCODE environment
+variables in Vercel are no longer used by the app. They're harmless to
+leave, but you can remove them from Vercel's Project Settings ->
+Environment Variables if you'd like to tidy up.

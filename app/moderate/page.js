@@ -1,102 +1,150 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import Header from '../../components/Header';
+import Nav from '../../components/Nav';
+import { supabase } from '../../lib/supabaseClient';
+import { useUser } from '../../lib/useUser';
 
 export default function ModeratePage() {
-  const [passcode, setPasscode] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
+  const user = useUser();
+  const [profile, setProfile] = useState(null);
   const [pending, setPending] = useState([]);
-  const [error, setError] = useState('');
+  const [requests, setRequests] = useState([]);
   const [editing, setEditing] = useState({});
+  const [message, setMessage] = useState('');
 
-  async function fetchPending(code) {
-    const res = await fetch('/api/moderate/list', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ passcode: code }),
-    });
-    if (res.status === 401) return null;
-    const data = await res.json();
-    return data.suggestions || [];
+  useEffect(() => {
+    if (user) loadProfile();
+  }, [user]);
+
+  async function loadProfile() {
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    setProfile(data);
+    if (data && (data.role === 'moderator' || data.role === 'admin')) loadPending();
+    if (data && data.role === 'admin') loadRequests();
   }
 
-  async function unlock() {
-    setError('');
-    const list = await fetchPending(passcode);
-    if (list === null) {
-      setError('Wrong passcode');
-      return;
-    }
-    setPending(list);
-    setUnlocked(true);
+  async function loadPending() {
+    const { data } = await supabase
+      .from('suggestions')
+      .select('*')
+      .eq('status', 'pending')
+      .order('submitted_at', { ascending: false });
+    setPending(data || []);
   }
 
-  async function refresh() {
-    const list = await fetchPending(passcode);
-    if (list !== null) setPending(list);
+  async function loadRequests() {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('moderator_status', 'pending')
+      .order('created_at', { ascending: false });
+    setRequests(data || []);
+  }
+
+  async function reviewRequest(id, approve) {
+    const { error } = await supabase.rpc('admin_review_moderator_request', { target_id: id, approve });
+    if (error) setMessage(error.message);
+    loadRequests();
   }
 
   function startEdit(s) {
-    setEditing((prev) => ({
-      ...prev,
-      [s.id]: { title: s.title, description: s.description, category: s.category },
-    }));
+    setEditing((prev) => ({ ...prev, [s.id]: { title: s.title, description: s.description, category: s.category } }));
   }
-
   function cancelEdit(id) {
-    setEditing((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
+    setEditing((prev) => { const n = { ...prev }; delete n[id]; return n; });
   }
-
   function updateField(id, field, value) {
     setEditing((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   }
 
   async function act(id, action) {
-    const edit = editing[id];
-    await fetch('/api/moderate/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ passcode, id, action, ...(edit || {}) }),
-    });
+    let update = {};
+    if (action === 'approve') update = { status: 'approved' };
+    else if (action === 'reject') update = { status: 'rejected' };
+    else if (action === 'edit') update = editing[id];
+    const { error } = await supabase.from('suggestions').update(update).eq('id', id);
+    if (error) setMessage(error.message);
     cancelEdit(id);
-    refresh();
+    loadPending();
   }
+
+  async function requestModerator() {
+    const { error } = await supabase.rpc('request_moderator_access');
+    if (!error) loadProfile();
+  }
+
+  if (user === undefined) {
+    return (
+      <main>
+        <Header />
+        <Nav />
+        <div className="content"><p className="hint">Loading…</p></div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main>
+        <Header />
+        <Nav />
+        <div className="content">
+          <div className="lock">
+            <h3>Moderator access</h3>
+            <p className="hint">Sign in to request or use moderator access.</p>
+            <div className="row" style={{ justifyContent: 'center', marginTop: 14 }}>
+              <a className="btn" href="/login">Sign in</a>
+              <a className="btn outline" href="/signup">Create account</a>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const isModOrAdmin = profile && (profile.role === 'moderator' || profile.role === 'admin');
 
   return (
     <main>
-      <header className="page-header">
-        <div className="shield">RT</div>
-        <p className="eyebrow">Community infrastructure survey</p>
-        <h1>Route Report</h1>
-      </header>
-      <nav className="tabs">
-        <Link href="/" className="tab">Browse</Link>
-        <Link href="/submit" className="tab">Submit</Link>
-        <Link href="/moderate" className="tab active">Moderate</Link>
-      </nav>
+      <Header />
+      <Nav />
       <div className="content">
-        {!unlocked ? (
+        {!isModOrAdmin && (
           <div className="lock">
-            <h3>Moderator access</h3>
-            <p className="hint">Enter the review passcode to see pending submissions.</p>
-            <input
-              type="text"
-              value={passcode}
-              onChange={(e) => setPasscode(e.target.value)}
-              placeholder="Passcode"
-              style={{ margin: '14px 0' }}
-            />
-            <button className="btn" onClick={unlock}>Unlock</button>
-            {error && <p className="hint" style={{ color: 'var(--coral)' }}>{error}</p>}
+            <h3>Not a moderator yet</h3>
+            {profile?.moderator_status === 'pending' ? (
+              <p className="hint">Your request is waiting on approval.</p>
+            ) : (
+              <>
+                <p className="hint">Request access to review and approve submissions.</p>
+                <button className="btn" onClick={requestModerator} style={{ marginTop: 12 }}>
+                  Request moderator access
+                </button>
+              </>
+            )}
           </div>
-        ) : (
-          <div>
-            <p className="hint" style={{ marginBottom: 14 }}>
+        )}
+
+        {profile?.role === 'admin' && requests.length > 0 && (
+          <>
+            <p className="hint" style={{ margin: '4px 0 10px' }}>Pending moderator requests</p>
+            {requests.map((r) => (
+              <div className="card" key={r.id}>
+                <h3>{r.email}</h3>
+                <div className="row">
+                  <button className="btn teal" onClick={() => reviewRequest(r.id, true)}>Approve</button>
+                  <button className="btn coral" onClick={() => reviewRequest(r.id, false)}>Deny</button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {isModOrAdmin && (
+          <>
+            <p className="hint" style={{ margin: '14px 0' }}>
               Pending submissions — edit if needed, then approve or reject.
             </p>
             {pending.length === 0 && <div className="empty">Nothing waiting for review.</div>}
@@ -111,22 +159,11 @@ export default function ModeratePage() {
                   {edit ? (
                     <>
                       <label>Title</label>
-                      <input
-                        type="text"
-                        value={edit.title}
-                        onChange={(e) => updateField(s.id, 'title', e.target.value)}
-                      />
+                      <input type="text" value={edit.title} onChange={(e) => updateField(s.id, 'title', e.target.value)} />
                       <label>Description</label>
-                      <textarea
-                        value={edit.description}
-                        onChange={(e) => updateField(s.id, 'description', e.target.value)}
-                      />
+                      <textarea value={edit.description} onChange={(e) => updateField(s.id, 'description', e.target.value)} />
                       <label>Category</label>
-                      <input
-                        type="text"
-                        value={edit.category}
-                        onChange={(e) => updateField(s.id, 'category', e.target.value)}
-                      />
+                      <input type="text" value={edit.category} onChange={(e) => updateField(s.id, 'category', e.target.value)} />
                     </>
                   ) : (
                     <>
@@ -140,9 +177,7 @@ export default function ModeratePage() {
                   </div>
 
                   <div className="row">
-                    {!edit && (
-                      <button className="btn outline" onClick={() => startEdit(s)}>Edit</button>
-                    )}
+                    {!edit && <button className="btn outline" onClick={() => startEdit(s)}>Edit</button>}
                     {edit && (
                       <>
                         <button className="btn outline" onClick={() => act(s.id, 'edit')}>Save edit</button>
@@ -155,8 +190,10 @@ export default function ModeratePage() {
                 </div>
               );
             })}
-          </div>
+          </>
         )}
+
+        {message && <p className="hint" style={{ color: 'var(--coral)' }}>{message}</p>}
       </div>
     </main>
   );

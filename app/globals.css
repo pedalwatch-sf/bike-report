@@ -190,6 +190,7 @@ label {
 }
 input[type='text'],
 input[type='email'],
+input[type='password'],
 input[type='file'],
 textarea,
 select {

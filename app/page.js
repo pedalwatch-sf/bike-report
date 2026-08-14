@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import Header from '../components/Header';
+import Nav from '../components/Nav';
 import { supabase } from '../lib/supabaseClient';
 
 export default function BrowsePage() {
@@ -65,20 +66,8 @@ export default function BrowsePage() {
 
   return (
     <main>
-      <header className="page-header">
-        <div className="shield">SF</div>
-        <p className="eyebrow">Fixing SF's Bike Infrastructure</p>
-        <h1>Route Report</h1>
-        <p className="sub">
-          Flag a bike lane or crossing that needs work. Approved reports go public — add your
-          name to the list and we&apos;ll track who&apos;s watching each one.
-        </p>
-      </header>
-      <nav className="tabs">
-        <Link href="/" className="tab active">Browse</Link>
-        <Link href="/submit" className="tab">Submit</Link>
-        <Link href="/moderate" className="tab">Moderate</Link>
-      </nav>
+      <Header subtitle="Flag a bike lane or crossing that needs work. Approved reports go public — add your name to the list and we'll track who's watching each one." />
+      <Nav />
       <div className="content">
         <div ref={mapRef} id="map" />
         {loaded && suggestions.length === 0 && (

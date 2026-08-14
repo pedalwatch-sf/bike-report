@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import Header from '../../components/Header';
+import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
+import { useUser } from '../../lib/useUser';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -14,6 +16,7 @@ const CATEGORIES = [
 ];
 
 export default function SubmitPage() {
+  const user = useUser();
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
@@ -27,6 +30,7 @@ export default function SubmitPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    if (!user) return;
     let map;
     (async () => {
       const L = (await import('leaflet')).default;
@@ -49,7 +53,7 @@ export default function SubmitPage() {
     return () => {
       if (map) map.remove();
     };
-  }, []);
+  }, [user]);
 
   async function handleSubmit() {
     if (!title.trim() || !description.trim()) {
@@ -87,6 +91,7 @@ export default function SubmitPage() {
       lng: coords.lng,
       status: 'pending',
       image_url,
+      user_id: user.id,
     });
 
     setSubmitting(false);
@@ -106,18 +111,39 @@ export default function SubmitPage() {
     }
   }
 
+  if (user === undefined) {
+    return (
+      <main>
+        <Header />
+        <Nav />
+        <div className="content"><p className="hint">Loading…</p></div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main>
+        <Header />
+        <Nav />
+        <div className="content">
+          <div className="lock">
+            <h3>Sign in to submit a report</h3>
+            <p className="hint">Creating an account lets you track your own submissions.</p>
+            <div className="row" style={{ justifyContent: 'center', marginTop: 14 }}>
+              <a className="btn" href="/login">Sign in</a>
+              <a className="btn outline" href="/signup">Create account</a>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main>
-      <header className="page-header">
-        <div className="shield">RT</div>
-        <p className="eyebrow">Community infrastructure survey</p>
-        <h1>Route Report</h1>
-      </header>
-      <nav className="tabs">
-        <Link href="/" className="tab">Browse</Link>
-        <Link href="/submit" className="tab active">Submit</Link>
-        <Link href="/moderate" className="tab">Moderate</Link>
-      </nav>
+      <Header />
+      <Nav />
       <div className="content">
         <label>What needs improvement?</label>
         <input
