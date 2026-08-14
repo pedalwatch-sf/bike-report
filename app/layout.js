@@ -2,7 +2,7 @@ import './globals.css';
 
 export const metadata = {
   title: 'Route Report — Bike Infrastructure Tracker',
-  description: 'Community-submitted bike lane and infrastructure reports',
+  description: 'Community-submitted bike lane infrastructure reports',
 };
 
 export default function RootLayout({ children }) {
