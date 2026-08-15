@@ -58,19 +58,11 @@ h1 {
 }
 .shield {
   position: absolute;
-  top: 28px;
+  top: 24px;
   right: 20px;
-  width: 42px;
-  height: 48px;
-  background: var(--yellow);
-  color: var(--ink);
-  clip-path: polygon(50% 0%, 100% 18%, 100% 75%, 50% 100%, 0% 75%, 0% 18%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Oswald', sans-serif;
-  font-weight: 600;
-  font-size: 15px;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
 }
 @media (max-width: 420px) {
   .page-header { padding-right: 20px; }

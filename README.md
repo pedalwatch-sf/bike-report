@@ -12,7 +12,10 @@ image storage, and user accounts, and deployed on Vercel.
 - **Leaflet** (loaded via CDN stylesheet + npm package) for every map: Browse,
   Submit, and the location editor in Moderate
 - Plain CSS in `app/globals.css` (no CSS framework), dark theme, custom
-  properties for color/radius/shadow tokens
+  properties for color/radius/shadow tokens. The two accent colors are
+  `--yellow` (`#f3af49`) and `--teal` (`#5982c0`, a complementary blue
+  despite the variable name), used for status/selection highlights
+  throughout the UI.
 - No environment variables for Supabase: the project URL and anon key are
   hardcoded in `lib/supabaseClient.js` (see "Security model" below for why
   that's fine)
