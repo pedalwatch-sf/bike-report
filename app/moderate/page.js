@@ -24,6 +24,10 @@ export default function ModeratePage() {
   const [requests, setRequests] = useState([]);
   const [changeSuggestions, setChangeSuggestions] = useState([]);
 
+  const [timelineEvents, setTimelineEvents] = useState([]);
+  const [eventDrafts, setEventDrafts] = useState({});
+  const [newEventText, setNewEventText] = useState({});
+
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -36,6 +40,7 @@ export default function ModeratePage() {
     if (data && (data.role === 'moderator' || data.role === 'admin')) {
       loadReports();
       loadChangeSuggestions();
+      loadTimelineEvents();
     }
     if (data && data.role === 'admin') {
       loadUsers();
@@ -65,6 +70,48 @@ export default function ModeratePage() {
     const { error } = await supabase.from('change_suggestions').update({ status: 'reviewed' }).eq('id', id);
     if (error) setMessage(error.message);
     loadChangeSuggestions();
+  }
+
+  async function loadTimelineEvents() {
+    const { data } = await supabase.rpc('get_all_timeline_updates_for_moderation');
+    setTimelineEvents(data || []);
+  }
+
+  async function postTimelineEvent(suggestionId) {
+    const text = (newEventText[suggestionId] || '').trim();
+    if (!text) return;
+    setMessage('');
+    const { error } = await supabase.from('updates').insert({
+      suggestion_id: suggestionId,
+      message: text,
+      created_by_email: profile?.email || null,
+    });
+    if (error) setMessage(error.message);
+    setNewEventText((prev) => ({ ...prev, [suggestionId]: '' }));
+    loadTimelineEvents();
+  }
+
+  function startEventEdit(ev) {
+    setEventDrafts((prev) => ({ ...prev, [ev.id]: ev.message }));
+  }
+  function cancelEventEdit(id) {
+    setEventDrafts((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  }
+  async function saveEventEdit(id) {
+    const text = (eventDrafts[id] || '').trim();
+    if (!text) return;
+    setMessage('');
+    const { error } = await supabase.from('updates').update({ message: text }).eq('id', id);
+    if (error) setMessage(error.message);
+    cancelEventEdit(id);
+    loadTimelineEvents();
+  }
+  async function deleteTimelineEvent(id) {
+    if (!window.confirm('Delete this timeline event?')) return;
+    setMessage('');
+    const { error } = await supabase.from('updates').delete().eq('id', id);
+    if (error) setMessage(error.message);
+    loadTimelineEvents();
   }
 
   async function loadUsers() {
@@ -230,6 +277,10 @@ export default function ModeratePage() {
   const changesByReport = {};
   changeSuggestions.forEach((cs) => {
     (changesByReport[cs.suggestion_id] ||= []).push(cs);
+  });
+  const timelineByReport = {};
+  timelineEvents.forEach((ev) => {
+    (timelineByReport[ev.suggestion_id] ||= []).push(ev);
   });
 
   return (
@@ -419,6 +470,20 @@ export default function ModeratePage() {
                           e.target.value = '';
                         }}
                       />
+
+                      <label>Timeline</label>
+                      <TimelineManager
+                        events={timelineByReport[s.id] || []}
+                        drafts={eventDrafts}
+                        onStartEdit={startEventEdit}
+                        onCancelEdit={cancelEventEdit}
+                        onDraftChange={(id, value) => setEventDrafts((prev) => ({ ...prev, [id]: value }))}
+                        onSaveEdit={saveEventEdit}
+                        onDelete={deleteTimelineEvent}
+                        newText={newEventText[s.id] || ''}
+                        onNewTextChange={(value) => setNewEventText((prev) => ({ ...prev, [s.id]: value }))}
+                        onPost={() => postTimelineEvent(s.id)}
+                      />
                     </>
                   ) : (
                     <>
@@ -506,6 +571,61 @@ function ChangeSuggestionCard({ cs, onReview, onAddImage, compact }) {
       <div className="row">
         {!compact && <a className="btn outline" href={`/report/${cs.suggestion_id}`}>View report</a>}
         <button className="btn teal" onClick={() => onReview(cs.id)}>Mark reviewed</button>
+      </div>
+    </div>
+  );
+}
+
+function TimelineManager({
+  events,
+  drafts,
+  onStartEdit,
+  onCancelEdit,
+  onDraftChange,
+  onSaveEdit,
+  onDelete,
+  newText,
+  onNewTextChange,
+  onPost,
+}) {
+  return (
+    <div>
+      {events.length === 0 && <p className="hint">No timeline events yet.</p>}
+      {events.map((ev) => {
+        const draft = drafts[ev.id];
+        return (
+          <div key={ev.id} style={{ marginBottom: 10 }}>
+            {draft !== undefined ? (
+              <>
+                <textarea value={draft} onChange={(e) => onDraftChange(ev.id, e.target.value)} />
+                <div className="row" style={{ marginTop: 6 }}>
+                  <button className="btn outline" onClick={() => onSaveEdit(ev.id)} disabled={!draft.trim()}>Save</button>
+                  <button className="btn outline" onClick={() => onCancelEdit(ev.id)}>Cancel</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="meta">
+                  {new Date(ev.created_at).toLocaleString()}
+                  {ev.created_by_email ? ` · ${ev.created_by_email}` : ''}
+                </div>
+                <p style={{ margin: '0 0 6px' }}>{ev.message}</p>
+                <div className="row">
+                  <button className="btn outline" onClick={() => onStartEdit(ev)}>Edit</button>
+                  <button className="btn coral" onClick={() => onDelete(ev.id)}>Delete</button>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })}
+      <textarea
+        value={newText}
+        onChange={(e) => onNewTextChange(e.target.value)}
+        placeholder="e.g. City confirmed this is scheduled for next quarter"
+      />
+      <div style={{ marginTop: 8 }}>
+        <button className="btn" onClick={onPost} disabled={!newText.trim()}>Post update</button>
       </div>
     </div>
   );

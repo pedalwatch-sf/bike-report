@@ -13,13 +13,11 @@ const ACTIVE_STATUSES = ['approved', 'resolved'];
 
 export default function ReportDetailPage({ params }) {
   const { id } = params;
-  const { user, profile } = useProfile();
+  const { user } = useProfile();
   const router = useRouter();
 
   const [report, setReport] = useState(undefined); // undefined = loading, null = not found
   const [updates, setUpdates] = useState([]);
-  const [newUpdate, setNewUpdate] = useState('');
-  const [posting, setPosting] = useState(false);
 
   const [changeMessage, setChangeMessage] = useState('');
   const [changeImages, setChangeImages] = useState([]);
@@ -69,21 +67,6 @@ export default function ReportDetailPage({ params }) {
     mapInstance.current = map;
   }
 
-  async function postUpdate() {
-    if (!newUpdate.trim()) return;
-    setPosting(true);
-    const { error } = await supabase.from('updates').insert({
-      suggestion_id: id,
-      message: newUpdate.trim(),
-      created_by_email: profile?.email || null,
-    });
-    setPosting(false);
-    if (!error) {
-      setNewUpdate('');
-      loadUpdates();
-    }
-  }
-
   async function submitChangeSuggestion() {
     if (!changeMessage.trim()) return;
     setSuggestingChange(true);
@@ -110,8 +93,6 @@ export default function ReportDetailPage({ params }) {
       setChangeSent(true);
     }
   }
-
-  const canModerate = profile && (profile.role === 'moderator' || profile.role === 'admin');
 
   if (report === undefined) {
     return (
@@ -171,22 +152,6 @@ export default function ReportDetailPage({ params }) {
             <p style={{ margin: 0 }}>{u.message}</p>
           </div>
         ))}
-
-        {canModerate && (
-          <div className="card">
-            <label>Post an update</label>
-            <textarea
-              value={newUpdate}
-              onChange={(e) => setNewUpdate(e.target.value)}
-              placeholder="e.g. City confirmed this is scheduled for next quarter"
-            />
-            <div style={{ marginTop: 10 }}>
-              <button className="btn" onClick={postUpdate} disabled={posting || !newUpdate.trim()}>
-                {posting ? 'Posting…' : 'Post update'}
-              </button>
-            </div>
-          </div>
-        )}
 
         {user && ACTIVE_STATUSES.includes(report.status) && (
           <div className="card">
