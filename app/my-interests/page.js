@@ -10,6 +10,7 @@ import { useUser } from '../../lib/useUser';
 export default function MyInterestsPage() {
   const user = useUser();
   const [reports, setReports] = useState(undefined);
+  const [updatedIds, setUpdatedIds] = useState(new Set());
 
   useEffect(() => {
     if (user) loadReports();
@@ -30,6 +31,15 @@ export default function MyInterestsPage() {
       .map((id) => (data || []).find((r) => r.id === id))
       .filter(Boolean);
     setReports(bySubscribedOrder);
+
+    setUpdatedIds(
+      new Set(
+        (subs || [])
+          .filter((s) => s.last_seen_status && s.last_seen_status !== bySubscribedOrder.find((r) => r.id === s.suggestion_id)?.status)
+          .map((s) => s.suggestion_id)
+      )
+    );
+    supabase.rpc('mark_subscriptions_seen');
   }
 
   if (user === undefined || (user && reports === undefined)) {
@@ -78,6 +88,7 @@ export default function MyInterestsPage() {
             key={r.id}
             report={r}
             following
+            updated={updatedIds.has(r.id)}
             onFollowingChange={(nowFollowing) => {
               if (!nowFollowing) setReports((prev) => prev.filter((x) => x.id !== r.id));
             }}

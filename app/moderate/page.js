@@ -16,6 +16,34 @@ import { CATEGORIES } from '../../lib/categories';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
+const STALE_DAYS = 7;
+
+function daysPending(submittedAt) {
+  return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 86400000);
+}
+
+const CSV_COLUMNS = ['id', 'title', 'category', 'status', 'description', 'lat', 'lng', 'submitted_at'];
+
+function toCsvValue(value) {
+  const s = String(value ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function reportsToCsv(rows) {
+  const lines = [CSV_COLUMNS.join(',')];
+  rows.forEach((r) => lines.push(CSV_COLUMNS.map((c) => toCsvValue(r[c])).join(',')));
+  return lines.join('\n');
+}
+
+function downloadCsv(filename, csv) {
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function ModeratePage() {
   const user = useUser();
@@ -514,6 +542,15 @@ export default function ModeratePage() {
               ))}
             </div>
 
+            <button
+              className="btn outline"
+              style={{ margin: '10px 0' }}
+              disabled={visibleReports.length === 0}
+              onClick={() => downloadCsv(`reports-${statusFilter}.csv`, reportsToCsv(visibleReports))}
+            >
+              Export {visibleReports.length} report{visibleReports.length === 1 ? '' : 's'} to CSV
+            </button>
+
             {visibleReports.length === 0 && (
               <div className="empty">{reportSearch.trim() ? 'No reports match your search.' : 'No reports in this view.'}</div>
             )}
@@ -619,6 +656,17 @@ export default function ModeratePage() {
                   <div className="meta">
                     {s.lat?.toFixed(4)}, {s.lng?.toFixed(4)} · {new Date(s.submitted_at).toLocaleString()}
                   </div>
+
+                  {!edit && s.status === 'pending' && (
+                    <p
+                      className="hint"
+                      style={{ margin: '4px 0 0', color: daysPending(s.submitted_at) >= STALE_DAYS ? 'var(--coral)' : 'var(--chalk-dim)' }}
+                    >
+                      {daysPending(s.submitted_at) === 0
+                        ? 'Submitted today'
+                        : `Pending ${daysPending(s.submitted_at)} day${daysPending(s.submitted_at) === 1 ? '' : 's'}`}
+                    </p>
+                  )}
 
                   {!edit && (s.subscribers?.[0]?.count ?? 0) > 0 && (
                     <div style={{ marginBottom: 10 }}>

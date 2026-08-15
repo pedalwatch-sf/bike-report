@@ -107,6 +107,11 @@ reports, suggest changes, or register interest.
   with next/prev), location, progress timeline, who reported it (links
   to their profile), an interest-follow toggle, and a "suggest a change"
   box for signed-in users on active reports.
+- **Impact** (`/impact`) -- public stat tiles (reports submitted, in
+  review, active, resolved) pulled from a `get_public_stats()` RPC that
+  returns aggregate counts only, so it can include pending/rejected
+  reports in the total without exposing their content to anonymous
+  visitors.
 - **Moderate** (`/moderate`) -- gated to moderator role and above, three
   tabs:
   - *Reports* -- filter by status (pending/approved/rejected/resolved/
@@ -115,7 +120,10 @@ reports, suggest changes, or register interest.
     reopen/delete; manage the progress timeline; view the interested-email
     list for a report. Flags a pending report with a warning when
     another pending or approved report is within ~125m, so likely
-    duplicates are easy to spot and consolidate.
+    duplicates are easy to spot and consolidate. Pending reports also
+    show how many days they've been waiting, flagged in coral past a
+    week. An "Export to CSV" button downloads the currently filtered
+    list.
   - *Suggested changes* -- review user-submitted change notes and photos
     alongside the original report, pull a suggested photo onto the
     report with one click.
@@ -128,7 +136,12 @@ reports, suggest changes, or register interest.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
 - **My interests** (`/my-interests`) -- every report you're following,
-  with the same toggle to unfollow.
+  with the same toggle to unfollow. A report whose status changed since
+  you last checked shows an "Updated" badge, and a small dot appears on
+  the Account tab in the nav bar so you notice without visiting this
+  page first -- both clear once you view the list. Followers with an
+  account also get an email when a report's status changes (see "Email
+  notifications" below).
 - **Profile** (`/profile/[id]`) -- anyone's public reporting history
   (approved/resolved reports only, plus an optional display name).
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
@@ -165,9 +178,13 @@ helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
 public profile) · `get_timeline_updates`, `get_all_timeline_updates_for_moderation`
 (progress timeline, with author email masked for non-moderators) ·
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
-`unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`
-(the interest-follow feature) · `handle_new_user` (creates a profile row
-on signup).
+`unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`,
+`mark_subscriptions_seen` (the interest-follow feature, plus the
+in-app "updated" indicator -- `subscriber_identities.last_seen_status`
+tracks the status each follower last saw per report) ·
+`handle_new_user` (creates a profile row on signup) · `get_public_stats`
+(aggregate-only counts for `/impact`; intentionally has no
+authorization check since it never returns row content).
 
 ## Database schema
 
@@ -178,6 +195,33 @@ own migration history rather than being the source of truth Supabase
 reads from -- when a new database change is made, the SQL gets applied
 directly to the live project and the matching file gets added here
 afterward, so the repo always shows what's actually running.
+
+## Email notifications
+
+When a report's `status` changes, a Postgres trigger on `suggestions`
+(`notify_report_status_change`) fires an async HTTP call via `pg_net`
+to the `notify-status-change` Supabase Edge Function
+(`supabase/functions/notify-status-change/`), which emails everyone
+following that report through Resend -- one request per recipient, so
+followers never see each other's addresses. It complements, not
+replaces, the in-app "Updated" indicator described above.
+
+- **Secrets live in Supabase Vault, not this repo.** The Resend API key
+  and a shared secret (which authenticates the trigger's call to the
+  edge function, since it isn't a user request and can't carry a JWT --
+  the function is deployed with `verify_jwt: false`) were both inserted
+  directly with `vault.create_secret(...)`, outside migration history,
+  so the raw values never touch a committed file. The edge function
+  reads them via `get_notification_secrets()`, a `SECURITY DEFINER`
+  function grantable only to `service_role` -- `vault.decrypted_secrets`
+  itself isn't exposed through the API.
+- **Currently sends from Resend's shared test domain**
+  (`onboarding@resend.dev`), which Resend restricts to only deliver to
+  the Resend account's own email until a custom domain is verified.
+  The trigger and edge function both work end-to-end today; only actual
+  delivery to real subscribers is blocked on that. To turn it on: verify
+  a domain in Resend, then update `FROM_ADDRESS` in
+  `supabase/functions/notify-status-change/index.ts` and redeploy.
 
 ## Security model
 
