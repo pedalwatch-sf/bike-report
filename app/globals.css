@@ -140,6 +140,7 @@ h1 {
 .badge.approved { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
 .badge.rejected { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
 .badge.resolved { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
+.badge.role-owner { background: var(--yellow); color: var(--ink); }
 .badge.role-admin { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
 .badge.role-moderator { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
 .badge.role-user { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
@@ -227,7 +228,9 @@ select {
   border-radius: 5px;
   padding: 10px 12px;
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  /* Keep at 16px+ -- iOS Safari auto-zooms the page on focus for any
+     text input rendered smaller than that. */
+  font-size: 16px;
 }
 textarea { min-height: 80px; resize: vertical; }
 .hint { font-size: 12px; color: var(--chalk-dim); opacity: 0.75; margin-top: 4px; }

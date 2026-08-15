@@ -7,6 +7,7 @@ import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useProfile } from '../../lib/useProfile';
 import { uploadImage } from '../../lib/uploadImage';
+import { SF_CENTER } from '../../lib/constants';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -60,7 +61,7 @@ export default function SubmitPage() {
     let map;
     (async () => {
       const L = (await import('leaflet')).default;
-      map = L.map(mapRef.current, { scrollWheelZoom: false }).setView([39, -98.5], 4);
+      map = L.map(mapRef.current, { scrollWheelZoom: false }).setView(SF_CENTER, 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
