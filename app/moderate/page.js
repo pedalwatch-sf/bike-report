@@ -10,6 +10,7 @@ import { uploadImage } from '../../lib/uploadImage';
 import { matchesSearch } from '../../lib/searchReports';
 import { roleLevel } from '../../lib/roles';
 import { SF_CENTER } from '../../lib/constants';
+import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
@@ -320,6 +321,17 @@ export default function ModeratePage() {
   const visibleReports = reports
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
     .filter((r) => matchesSearch(r, reportSearch));
+  const pendingClusters = {};
+  const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
+  pendingReports.forEach((a) => {
+    const others = pendingReports.filter(
+      (b) =>
+        b.id !== a.id &&
+        b.category === a.category &&
+        haversineMeters(a.lat, a.lng, b.lat, b.lng) <= DUPLICATE_RADIUS_METERS
+    );
+    if (others.length > 0) pendingClusters[a.id] = others;
+  });
   const changesByReport = {};
   changeSuggestions.forEach((cs) => {
     (changesByReport[cs.suggestion_id] ||= []).push(cs);
@@ -509,6 +521,14 @@ export default function ModeratePage() {
                   {!edit && <ImageGallery images={s.report_images} />}
                   <span className={`badge ${s.status}`}>{s.status}</span>
                   <span className="badge cat">{s.category}</span>
+
+                  {!edit && pendingClusters[s.id] && (
+                    <p className="hint" style={{ color: 'var(--coral)', margin: '8px 0 0' }}>
+                      ⚠ {pendingClusters[s.id].length} other pending report
+                      {pendingClusters[s.id].length > 1 ? 's' : ''} nearby, same category:{' '}
+                      {pendingClusters[s.id].map((r) => r.title).join(', ')}
+                    </p>
+                  )}
 
                   {edit ? (
                     <>

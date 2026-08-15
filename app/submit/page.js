@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { useProfile } from '../../lib/useProfile';
 import { uploadImage } from '../../lib/uploadImage';
 import { SF_CENTER } from '../../lib/constants';
+import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -18,43 +19,18 @@ const CATEGORIES = [
   'Other',
 ];
 
-const DUPLICATE_RADIUS_METERS = 75;
-
-function haversineMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
 async function findNearbyReports(lat, lng, category) {
-  const { data: approved } = await supabase
+  const { data } = await supabase
     .from('suggestions')
     .select('id, title, lat, lng, category')
     .eq('status', 'approved');
-  const nearbyApproved = (approved || []).filter(
+  return (data || []).filter(
     (r) =>
       r.category === category &&
       r.lat != null &&
       r.lng != null &&
       haversineMeters(lat, lng, r.lat, r.lng) <= DUPLICATE_RADIUS_METERS
   );
-
-  // RLS only lets a user see their own pending reports, so a plain query
-  // can't catch someone else's still-pending submission for the same
-  // spot -- this RPC checks for that too.
-  const { data: pending } = await supabase.rpc('find_nearby_pending_reports', {
-    p_lat: lat,
-    p_lng: lng,
-    p_category: category,
-    p_radius_meters: DUPLICATE_RADIUS_METERS,
-  });
-
-  return [...nearbyApproved, ...(pending || [])];
 }
 
 export default function SubmitPage() {
