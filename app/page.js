@@ -57,13 +57,7 @@ export default function BrowsePage() {
       .map((id) => (data || []).find((r) => r.id === id))
       .filter(Boolean);
     setFollowingReports(await attachReporterNames(bySubscribedOrder));
-    setUpdatedIds(
-      new Set(
-        (subs || [])
-          .filter((s) => s.last_seen_status && s.last_seen_status !== bySubscribedOrder.find((r) => r.id === s.suggestion_id)?.status)
-          .map((s) => s.suggestion_id)
-      )
-    );
+    setUpdatedIds(new Set((subs || []).filter((s) => s.has_update).map((s) => s.suggestion_id)));
   }
 
   // Shared by both the Active/Resolved cards and the Following cards, so
