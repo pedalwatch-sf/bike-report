@@ -95,9 +95,9 @@ there.
 
 ## Cleaning up (optional)
 
-The SUPABASE_SERVICE_ROLE_KEY and MODERATOR_PASSCODE environment
-variables in Vercel, and the `/api/moderate/list` and `/api/moderate/update`
-routes in the code, are leftover from an earlier passcode-based version
-and aren't used anymore. They're harmless to leave, but you can remove the
-Vercel env vars from Project Settings -> Environment Variables, or delete
-the two route files, if you'd like to tidy up.
+The `/api/moderate/list` and `/api/moderate/update` routes from an
+earlier passcode-based version have been removed -- moderation goes
+through Supabase Auth and RLS now. If you still have
+SUPABASE_SERVICE_ROLE_KEY or MODERATOR_PASSCODE set in Vercel from
+that version, they're no longer read by any code path; you can remove
+them from Project Settings -> Environment Variables.
