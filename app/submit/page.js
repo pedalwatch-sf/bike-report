@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
-import { useUser } from '../../lib/useUser';
+import { useProfile } from '../../lib/useProfile';
 import { uploadImage } from '../../lib/uploadImage';
 
 const CATEGORIES = [
@@ -41,7 +41,7 @@ async function findNearbyReports(lat, lng) {
 }
 
 export default function SubmitPage() {
-  const user = useUser();
+  const { user, profile } = useProfile();
   const router = useRouter();
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -175,6 +175,21 @@ export default function SubmitPage() {
               <a className="btn" href="/login">Sign in</a>
               <a className="btn outline" href="/signup">Create account</a>
             </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (profile?.banned) {
+    return (
+      <main>
+        <Header />
+        <Nav />
+        <div className="content">
+          <div className="lock">
+            <h3>Submitting is disabled</h3>
+            <p className="hint">Your account has been restricted from submitting new reports.</p>
           </div>
         </div>
       </main>

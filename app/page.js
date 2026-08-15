@@ -5,12 +5,14 @@ import Header from '../components/Header';
 import Nav from '../components/Nav';
 import ReportCard from '../components/ReportCard';
 import { supabase } from '../lib/supabaseClient';
+import { matchesSearch } from '../lib/searchReports';
 
 const SF_CENTER = [37.7749, -122.4194];
 
 export default function BrowsePage() {
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [search, setSearch] = useState('');
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
@@ -51,8 +53,9 @@ export default function BrowsePage() {
     mapInstance.current = map;
   }
 
-  const active = suggestions.filter((s) => s.status === 'approved');
-  const resolved = suggestions.filter((s) => s.status === 'resolved');
+  const filtered = suggestions.filter((s) => matchesSearch(s, search));
+  const active = filtered.filter((s) => s.status === 'approved');
+  const resolved = filtered.filter((s) => s.status === 'resolved');
 
   return (
     <main>
@@ -60,8 +63,17 @@ export default function BrowsePage() {
       <Nav />
       <div className="content">
         <div ref={mapRef} id="map" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search reports by title, description, or category…"
+          style={{ marginBottom: 14 }}
+        />
         {loaded && active.length === 0 && (
-          <div className="empty">No active reports yet.<br />Be the first to submit one.</div>
+          <div className="empty">
+            {search.trim() ? 'No reports match your search.' : <>No active reports yet.<br />Be the first to submit one.</>}
+          </div>
         )}
         {active.map((s) => (
           <ReportCard key={s.id} report={s} />
