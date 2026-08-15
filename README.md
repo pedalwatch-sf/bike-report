@@ -181,7 +181,9 @@ functions instead, each doing its own authorization check internally:
 `is_admin`, `is_moderator_or_admin`, `is_banned`, `is_owner`, `role_level`
 (internal helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
 `request_moderator_access`, `moderator_set_display_name`,
-`moderator_set_banned` (account management)
+`moderator_set_banned`, `get_users_for_moderation` (account management --
+the last one also surfaces each account's email confirmation status
+from `auth.users`, which Moderate flags with an "Unconfirmed" badge)
 · `set_display_name`, `get_public_profile`, `get_public_profiles` (your
 own profile / anyone's public profile, single or batched -- the batched
 form resolves reporter display names for a whole page of report cards

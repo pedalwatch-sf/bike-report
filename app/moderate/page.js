@@ -163,10 +163,7 @@ export default function ModeratePage() {
   }
 
   async function loadUsers() {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data } = await supabase.rpc('get_users_for_moderation');
     setUsers(data || []);
   }
 
@@ -479,6 +476,7 @@ export default function ModeratePage() {
                   )}
                   <span className={`badge role-${u.role}`}>{u.role}</span>
                   {u.banned && <span className="badge banned">Banned</span>}
+                  {!u.email_confirmed_at && <span className="badge pending">Unconfirmed</span>}
                   {u.moderator_status && u.moderator_status !== 'none' && (
                     <span className="badge cat">Moderator request: {u.moderator_status}</span>
                   )}
