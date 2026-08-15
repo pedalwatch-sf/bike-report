@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Header from '../../../components/Header';
 import Nav from '../../../components/Nav';
 import InterestButton from '../../../components/InterestButton';
@@ -17,6 +18,7 @@ export default function ReportDetailPage({ params }) {
   const router = useRouter();
 
   const [report, setReport] = useState(undefined); // undefined = loading, null = not found
+  const [reporter, setReporter] = useState(null);
   const [updates, setUpdates] = useState([]);
 
   const [changeMessage, setChangeMessage] = useState('');
@@ -45,6 +47,10 @@ export default function ReportDetailPage({ params }) {
       .eq('id', id)
       .single();
     setReport(data || null);
+    if (data?.user_id) {
+      const { data: profileData } = await supabase.rpc('get_public_profile', { p_user_id: data.user_id });
+      setReporter(profileData?.[0] || null);
+    }
   }
 
   async function loadUpdates() {
@@ -136,7 +142,17 @@ export default function ReportDetailPage({ params }) {
           <span className="badge cat">{report.category}</span>
           <h3>{report.title}</h3>
           <p>{report.description}</p>
-          <div className="meta">Reported {new Date(report.submitted_at).toLocaleDateString()}</div>
+          <div className="meta">
+            Reported {new Date(report.submitted_at).toLocaleDateString()}
+            {report.user_id && (
+              <>
+                {' · '}
+                <Link href={`/profile/${report.user_id}`} style={{ color: 'var(--teal)' }}>
+                  {reporter?.display_name || 'view reporter'}
+                </Link>
+              </>
+            )}
+          </div>
           {report.lat && report.lng && <div ref={mapRef} id="map" />}
           <InterestButton suggestionId={report.id} count={report.subscribers?.[0]?.count ?? 0} />
         </div>

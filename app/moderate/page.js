@@ -370,12 +370,14 @@ export default function ModeratePage() {
             {users.map((u) => (
               <div className="card" key={u.id}>
                 <h3>{u.email}</h3>
+                {u.display_name && <div className="meta" style={{ marginBottom: 8 }}>{u.display_name}</div>}
                 <span className={`badge role-${u.role}`}>{u.role}</span>
                 {u.moderator_status && u.moderator_status !== 'none' && (
                   <span className="badge cat">Moderator request: {u.moderator_status}</span>
                 )}
                 <div className="meta">Joined {new Date(u.created_at).toLocaleDateString()}</div>
                 <div className="row" style={{ marginTop: 8 }}>
+                  <a className="btn outline" href={`/profile/${u.id}`}>View public profile</a>
                   {ROLES.map((role) => (
                     <button
                       key={role}
