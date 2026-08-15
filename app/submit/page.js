@@ -10,6 +10,7 @@ import { uploadImage } from '../../lib/uploadImage';
 import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
 import { escapeHtml } from '../../lib/escapeHtml';
+import { dotIcon } from '../../lib/leafletDotIcon';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -61,21 +62,13 @@ export default function SubmitPage() {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
 
-      const dotIcon = (color) =>
-        L.divIcon({
-          className: '',
-          html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid rgba(0,0,0,0.45);box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
-        });
-
       const { data: approved } = await supabase
         .from('suggestions')
         .select('title, lat, lng')
         .eq('status', 'approved');
       (approved || []).forEach((r) => {
         if (r.lat != null && r.lng != null) {
-          L.marker([r.lat, r.lng], { icon: dotIcon('var(--teal)') })
+          L.marker([r.lat, r.lng], { icon: dotIcon(L, 'var(--teal)') })
             .addTo(map)
             .bindPopup(`<b>${escapeHtml(r.title)}</b>`);
         }
@@ -84,7 +77,7 @@ export default function SubmitPage() {
       map.on('click', (e) => {
         setCoords(e.latlng);
         if (markerRef.current) map.removeLayer(markerRef.current);
-        markerRef.current = L.marker(e.latlng, { icon: dotIcon('var(--yellow)') }).addTo(map);
+        markerRef.current = L.marker(e.latlng, { icon: dotIcon(L, 'var(--yellow)') }).addTo(map);
       });
       mapInstance.current = map;
       if (navigator.geolocation) {

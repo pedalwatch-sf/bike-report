@@ -82,9 +82,11 @@ reports, suggest changes, or register interest.
 
 ## What's on each page
 
-- **Browse** (`/`) -- map centered on SF, a search box, and separated
-  Active / Resolved sections. Each report card shows its photo, category,
-  interest count, and an "I'm interested" toggle.
+- **Browse** (`/`) -- map centered on SF with a colored dot per report
+  (teal for active, yellow for resolved -- matching those status
+  badges' colors elsewhere), a search box, and Active / Resolved pill
+  tabs. Each report card shows its photo, category, interest count,
+  and an "I'm interested" toggle.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a teal dot
   for context, alongside your own pin in yellow once you place one.
