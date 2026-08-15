@@ -8,10 +8,10 @@ import { useUser } from '../../lib/useUser';
 import { uploadImage } from '../../lib/uploadImage';
 import { matchesSearch } from '../../lib/searchReports';
 import { roleLevel } from '../../lib/roles';
+import { SF_CENTER } from '../../lib/constants';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved'];
 const ROLES = ['user', 'moderator', 'admin'];
-const SF_CENTER = [37.7749, -122.4194];
 
 export default function ModeratePage() {
   const user = useUser();

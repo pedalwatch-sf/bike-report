@@ -6,8 +6,7 @@ import Nav from '../components/Nav';
 import ReportCard from '../components/ReportCard';
 import { supabase } from '../lib/supabaseClient';
 import { matchesSearch } from '../lib/searchReports';
-
-const SF_CENTER = [37.7749, -122.4194];
+import { SF_CENTER } from '../lib/constants';
 
 export default function BrowsePage() {
   const [suggestions, setSuggestions] = useState([]);
