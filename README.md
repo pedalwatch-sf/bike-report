@@ -30,7 +30,6 @@ app/                  Next.js App Router pages (one folder per route)
   moderate/              Reports / Suggested changes / User accounts tabs
   account/               Your own account settings
   my-reports/            Everything you've submitted
-  my-interests/           Everything you're following
   profile/[id]/           Anyone's public reporting history
   login/, signup/         Auth forms
   kitten/                 The easter egg (see below)
@@ -59,8 +58,8 @@ own level, including their own.
 - **Signed-in users** can submit a report (title, category, location pin,
   optional photo), suggest changes to any active report (a note, plus
   optional photos) for a moderator to review, and follow reports by
-  tapping "I'm interested" to track them on their own `/my-interests`
-  page. They can also withdraw their own submission at any time from
+  tapping "I'm interested" to track them on Browse's Following pill.
+  They can also withdraw their own submission at any time from
   `/my-reports` -- this doesn't delete it, it just moves it to a
   `withdrawn` status moderators can still see. Each account also gets a
   public profile page (`/profile/[id]`) listing their approved/resolved
@@ -92,9 +91,13 @@ reports, suggest changes, or register interest.
 - **Browse** (`/`) -- map centered on SF with a colored dot per report
   (blue for active, yellow for resolved -- matching those status
   badges' colors elsewhere), a search box, and Active / Resolved /
-  Following pills -- Active and Resolved filter the list in place,
-  Following links out to `/my-interests`. Each report card shows its
-  photo, category, interest count, and an "I'm interested" toggle.
+  Following pills, all filtering the same page in place. Following
+  lists every report you've registered interest in, any status, with
+  an "Updated" badge on ones whose status changed since you last
+  checked -- a small dot appears on the Browse tab in the nav bar so
+  you notice without switching pills first, both clear once you view
+  the list. Each report card shows its photo, category, interest
+  count, and an "I'm interested" toggle.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
   for context, alongside your own pin in yellow once you place one.
@@ -136,11 +139,6 @@ reports, suggest changes, or register interest.
   turn two-factor authentication on or off.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
-- **My interests** (`/my-interests`) -- every report you're following,
-  with the same toggle to unfollow. A report whose status changed since
-  you last checked shows an "Updated" badge, and a small dot appears on
-  the Account tab in the nav bar so you notice without visiting this
-  page first -- both clear once you view the list.
 - **Profile** (`/profile/[id]`) -- anyone's public reporting history
   (approved/resolved reports only, plus an optional display name).
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase

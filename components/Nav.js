@@ -45,17 +45,17 @@ export default function Nav() {
 
   return (
     <nav className="tabs">
-      {tab('/', 'Browse')}
-      {tab('/submit', 'Submit')}
-      {tab('/impact', 'Impact')}
-      {canModerate && tab('/moderate', 'Moderate')}
       {tab(
-        '/account',
+        '/',
         <>
-          {user ? 'Account' : 'Sign in'}
+          Browse
           {hasUpdates && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
         </>
       )}
+      {tab('/submit', 'Submit')}
+      {tab('/impact', 'Impact')}
+      {canModerate && tab('/moderate', 'Moderate')}
+      {tab('/account', user ? 'Account' : 'Sign in')}
     </nav>
   );
 }
