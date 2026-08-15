@@ -66,6 +66,32 @@ export default function BrowsePage() {
     );
   }
 
+  // Shared by both the Active/Resolved cards and the Following cards, so
+  // following/unfollowing from either place keeps myInterests and the
+  // Following pill's own list in sync with each other.
+  function handleFollowingChange(report, nowFollowing) {
+    setMyInterests((prev) => {
+      const next = new Set(prev);
+      if (nowFollowing) next.add(report.id);
+      else next.delete(report.id);
+      return next;
+    });
+    setFollowingReports((prev) => {
+      const list = prev || [];
+      if (nowFollowing) {
+        return list.some((r) => r.id === report.id) ? list : [report, ...list];
+      }
+      return list.filter((r) => r.id !== report.id);
+    });
+    if (!nowFollowing) {
+      setUpdatedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(report.id);
+        return next;
+      });
+    }
+  }
+
   useEffect(() => {
     if (loaded) drawMap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -162,16 +188,7 @@ export default function BrowsePage() {
                   report={r}
                   following
                   updated={updatedIds.has(r.id)}
-                  onFollowingChange={(nowFollowing) => {
-                    if (!nowFollowing) {
-                      setFollowingReports((prev) => prev.filter((x) => x.id !== r.id));
-                      setUpdatedIds((prev) => {
-                        const next = new Set(prev);
-                        next.delete(r.id);
-                        return next;
-                      });
-                    }
-                  }}
+                  onFollowingChange={(nowFollowing) => handleFollowingChange(r, nowFollowing)}
                 />
               ))}
           </>
@@ -187,7 +204,12 @@ export default function BrowsePage() {
               </div>
             )}
             {visible.map((s) => (
-              <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
+              <ReportCard
+                key={s.id}
+                report={s}
+                following={myInterests.has(s.id)}
+                onFollowingChange={(nowFollowing) => handleFollowingChange(s, nowFollowing)}
+              />
             ))}
           </>
         )}
