@@ -21,14 +21,13 @@ const CATEGORIES = [
   'Other',
 ];
 
-async function findNearbyReports(lat, lng, category) {
+async function findNearbyReports(lat, lng) {
   const { data } = await supabase
     .from('suggestions')
     .select('id, title, lat, lng, category')
     .eq('status', 'approved');
   return (data || []).filter(
     (r) =>
-      r.category === category &&
       r.lat != null &&
       r.lng != null &&
       haversineMeters(lat, lng, r.lat, r.lng) <= DUPLICATE_RADIUS_METERS
@@ -111,7 +110,7 @@ export default function SubmitPage() {
         return;
       }
 
-      const nearby = await findNearbyReports(coords.lat, coords.lng, category);
+      const nearby = await findNearbyReports(coords.lat, coords.lng);
       if (nearby.length > 0) {
         const names = nearby.map((r) => `"${r.title}"`).join(', ');
         const proceed = window.confirm(
