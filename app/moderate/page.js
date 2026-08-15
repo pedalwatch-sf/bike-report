@@ -50,6 +50,40 @@ function usePersistedFilter(key, defaultValue, allowed) {
   return [value, setValue];
 }
 
+// Same idea as usePersistedFilter, but for a pill row where more than one
+// option can be active at once. Always holds at least one value --
+// ['all'] means no filtering.
+function usePersistedMultiFilter(key, defaultValue, allowed) {
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(key));
+      if (Array.isArray(stored) && stored.length > 0 && stored.every((v) => allowed.includes(v))) {
+        return stored;
+      }
+    } catch {
+      // fall through to default
+    }
+    return defaultValue;
+  });
+  useEffect(() => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+  return [value, setValue];
+}
+
+// Clicking 'all' resets to just ['all']; clicking any other pill toggles
+// it on/off within the current selection (dropping 'all' first), and
+// falls back to ['all'] if that empties the selection.
+function toggleFilterValue(current, value) {
+  if (value === 'all') return ['all'];
+  const withoutAll = current.filter((v) => v !== 'all');
+  const next = withoutAll.includes(value)
+    ? withoutAll.filter((v) => v !== value)
+    : [...withoutAll, value];
+  return next.length > 0 ? next : ['all'];
+}
+
 function daysPending(submittedAt) {
   return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 86400000);
 }
@@ -89,9 +123,11 @@ export default function ModeratePage() {
 
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
-  const [userStatusFilter, setUserStatusFilter] = usePersistedFilter('moderate-user-status-filter', 'all', ACCOUNT_STATUS_FILTERS);
-  const [elevationFilter, setElevationFilter] = usePersistedFilter('moderate-elevation-filter', 'all', ELEVATION_FILTERS);
-  const [userFiltersOpen, setUserFiltersOpen] = useState(() => userStatusFilter !== 'all' || elevationFilter !== 'all');
+  const [userStatusFilters, setUserStatusFilters] = usePersistedMultiFilter('moderate-user-status-filters', ['all'], ACCOUNT_STATUS_FILTERS);
+  const [elevationFilters, setElevationFilters] = usePersistedMultiFilter('moderate-elevation-filters', ['all'], ELEVATION_FILTERS);
+  const [userFiltersOpen, setUserFiltersOpen] = useState(
+    () => !userStatusFilters.includes('all') || !elevationFilters.includes('all')
+  );
   const [requests, setRequests] = useState([]);
   const [nameDrafts, setNameDrafts] = useState({});
   const [changeSuggestions, setChangeSuggestions] = useState([]);
@@ -403,9 +439,11 @@ export default function ModeratePage() {
     .filter((r) => matchesSearch(r, reportSearch));
   const visibleUsers = users
     .filter((u) => matchesUserSearch(u, userSearch))
-    .filter((u) => matchesAccountStatus(u, userStatusFilter))
-    .filter((u) => elevationFilter === 'all' || u.role === elevationFilter);
-  const activeUserFilterCount = (userStatusFilter !== 'all' ? 1 : 0) + (elevationFilter !== 'all' ? 1 : 0);
+    .filter((u) => userStatusFilters.includes('all') || userStatusFilters.some((f) => matchesAccountStatus(u, f)))
+    .filter((u) => elevationFilters.includes('all') || elevationFilters.includes(u.role));
+  const activeUserFilterCount =
+    (userStatusFilters.includes('all') ? 0 : userStatusFilters.length) +
+    (elevationFilters.includes('all') ? 0 : elevationFilters.length);
   const pendingClusters = {};
   const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
   const approvedReports = reports.filter((r) => r.status === 'approved' && r.lat != null && r.lng != null);
@@ -531,7 +569,7 @@ export default function ModeratePage() {
                 <button
                   type="button"
                   className="btn outline"
-                  onClick={() => { setUserStatusFilter('all'); setElevationFilter('all'); }}
+                  onClick={() => { setUserStatusFilters(['all']); setElevationFilters(['all']); }}
                 >
                   Clear filters
                 </button>
@@ -540,21 +578,31 @@ export default function ModeratePage() {
             {userFiltersOpen && (
               <div className="card">
                 <label>Status</label>
-                <select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)}>
+                <div className="filter-row">
                   {ACCOUNT_STATUS_FILTERS.map((f) => (
-                    <option key={f} value={f}>
+                    <button
+                      key={f}
+                      type="button"
+                      className={`filter-btn ${userStatusFilters.includes(f) ? 'active' : ''}`}
+                      onClick={() => setUserStatusFilters((prev) => toggleFilterValue(prev, f))}
+                    >
                       {f} {f !== 'all' && `(${users.filter((u) => matchesAccountStatus(u, f)).length})`}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                </div>
                 <label>Role</label>
-                <select value={elevationFilter} onChange={(e) => setElevationFilter(e.target.value)}>
+                <div className="filter-row">
                   {ELEVATION_FILTERS.map((f) => (
-                    <option key={f} value={f}>
+                    <button
+                      key={f}
+                      type="button"
+                      className={`filter-btn ${elevationFilters.includes(f) ? 'active' : ''}`}
+                      onClick={() => setElevationFilters((prev) => toggleFilterValue(prev, f))}
+                    >
                       {f} {f !== 'all' && `(${users.filter((u) => u.role === f).length})`}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
             )}
 
