@@ -10,13 +10,17 @@ import { useProfile } from '../../../lib/useProfile';
 
 export default function ReportDetailPage({ params }) {
   const { id } = params;
-  const { profile } = useProfile();
+  const { user, profile } = useProfile();
   const router = useRouter();
 
   const [report, setReport] = useState(undefined); // undefined = loading, null = not found
   const [updates, setUpdates] = useState([]);
   const [newUpdate, setNewUpdate] = useState('');
   const [posting, setPosting] = useState(false);
+
+  const [changeMessage, setChangeMessage] = useState('');
+  const [suggestingChange, setSuggestingChange] = useState(false);
+  const [changeSent, setChangeSent] = useState(false);
 
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -42,11 +46,7 @@ export default function ReportDetailPage({ params }) {
   }
 
   async function loadUpdates() {
-    const { data } = await supabase
-      .from('updates')
-      .select('*')
-      .eq('suggestion_id', id)
-      .order('created_at', { ascending: true });
+    const { data } = await supabase.rpc('get_timeline_updates', { p_suggestion_id: id });
     setUpdates(data || []);
   }
 
@@ -77,6 +77,22 @@ export default function ReportDetailPage({ params }) {
     if (!error) {
       setNewUpdate('');
       loadUpdates();
+    }
+  }
+
+  async function submitChangeSuggestion() {
+    if (!changeMessage.trim()) return;
+    setSuggestingChange(true);
+    const { error } = await supabase.from('change_suggestions').insert({
+      suggestion_id: id,
+      user_id: user.id,
+      submitter_email: user.email,
+      message: changeMessage.trim(),
+    });
+    setSuggestingChange(false);
+    if (!error) {
+      setChangeMessage('');
+      setChangeSent(true);
     }
   }
 
@@ -151,6 +167,32 @@ export default function ReportDetailPage({ params }) {
                 {posting ? 'Posting…' : 'Post update'}
               </button>
             </div>
+          </div>
+        )}
+
+        {user && report.status === 'approved' && (
+          <div className="card">
+            <label>Suggest a change</label>
+            {changeSent ? (
+              <p className="hint">Thanks — a moderator will review your suggestion.</p>
+            ) : (
+              <>
+                <textarea
+                  value={changeMessage}
+                  onChange={(e) => setChangeMessage(e.target.value)}
+                  placeholder="e.g. This has actually been fixed, or the category should be different"
+                />
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    className="btn outline"
+                    onClick={submitChangeSuggestion}
+                    disabled={suggestingChange || !changeMessage.trim()}
+                  >
+                    {suggestingChange ? 'Sending…' : 'Send suggestion'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -20,6 +20,7 @@ export default function ModeratePage() {
 
   const [users, setUsers] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [changeSuggestions, setChangeSuggestions] = useState([]);
 
   const [message, setMessage] = useState('');
 
@@ -30,7 +31,10 @@ export default function ModeratePage() {
   async function loadProfile() {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
-    if (data && (data.role === 'moderator' || data.role === 'admin')) loadReports();
+    if (data && (data.role === 'moderator' || data.role === 'admin')) {
+      loadReports();
+      loadChangeSuggestions();
+    }
     if (data && data.role === 'admin') {
       loadUsers();
       loadRequests();
@@ -43,6 +47,22 @@ export default function ModeratePage() {
       .select('*')
       .order('submitted_at', { ascending: false });
     setReports(data || []);
+  }
+
+  async function loadChangeSuggestions() {
+    const { data } = await supabase
+      .from('change_suggestions')
+      .select('*, suggestions(title)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    setChangeSuggestions(data || []);
+  }
+
+  async function markChangeReviewed(id) {
+    setMessage('');
+    const { error } = await supabase.from('change_suggestions').update({ status: 'reviewed' }).eq('id', id);
+    if (error) setMessage(error.message);
+    loadChangeSuggestions();
   }
 
   async function loadUsers() {
@@ -189,7 +209,7 @@ export default function ModeratePage() {
           </div>
         )}
 
-        {isAdmin && (
+        {isModOrAdmin && (
           <div className="filter-row">
             <button
               className={`filter-btn ${section === 'reports' ? 'active' : ''}`}
@@ -198,12 +218,42 @@ export default function ModeratePage() {
               Reports
             </button>
             <button
-              className={`filter-btn ${section === 'users' ? 'active' : ''}`}
-              onClick={() => setSection('users')}
+              className={`filter-btn ${section === 'changes' ? 'active' : ''}`}
+              onClick={() => setSection('changes')}
             >
-              User accounts
+              Suggested changes {changeSuggestions.length > 0 && `(${changeSuggestions.length})`}
             </button>
+            {isAdmin && (
+              <button
+                className={`filter-btn ${section === 'users' ? 'active' : ''}`}
+                onClick={() => setSection('users')}
+              >
+                User accounts
+              </button>
+            )}
           </div>
+        )}
+
+        {isModOrAdmin && section === 'changes' && (
+          <>
+            <p className="hint" style={{ margin: '4px 0 10px' }}>
+              Changes users have suggested for active reports.
+            </p>
+            {changeSuggestions.length === 0 && <div className="empty">No pending suggestions.</div>}
+            {changeSuggestions.map((cs) => (
+              <div className="card" key={cs.id}>
+                <span className="badge cat">{cs.suggestions?.title || 'Report'}</span>
+                <p>{cs.message}</p>
+                <div className="meta">
+                  {cs.submitter_email} · {new Date(cs.created_at).toLocaleString()}
+                </div>
+                <div className="row">
+                  <a className="btn outline" href={`/report/${cs.suggestion_id}`}>View report</a>
+                  <button className="btn teal" onClick={() => markChangeReviewed(cs.id)}>Mark reviewed</button>
+                </div>
+              </div>
+            ))}
+          </>
         )}
 
         {isAdmin && section === 'users' && (
@@ -253,7 +303,7 @@ export default function ModeratePage() {
           </>
         )}
 
-        {isModOrAdmin && (!isAdmin || section === 'reports') && (
+        {isModOrAdmin && section === 'reports' && (
           <>
             <div className="filter-row">
               {['all', ...STATUSES].map((f) => (
