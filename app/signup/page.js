@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import Header from '../../components/Header';
 import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
+import { TURNSTILE_SITE_KEY } from '../../lib/constants';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captcha = useRef();
 
   async function handleSignup() {
     if (!email.trim() || password.length < 6) {
@@ -18,7 +22,13 @@ export default function SignupPage() {
     }
     setBusy(true);
     setMessage('');
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { captchaToken },
+    });
+    captcha.current?.reset();
+    setCaptchaToken('');
     setBusy(false);
     if (error) {
       setMessage(error.message);
@@ -44,7 +54,15 @@ export default function SignupPage() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <p className="hint">At least 6 characters.</p>
           <div style={{ marginTop: 16 }}>
-            <button className="btn" onClick={handleSignup} disabled={busy}>
+            <Turnstile
+              ref={captcha}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken('')}
+            />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <button className="btn" onClick={handleSignup} disabled={busy || !captchaToken}>
               {busy ? 'Creating…' : 'Create account'}
             </button>
           </div>
