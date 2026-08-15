@@ -1,14 +1,14 @@
 :root {
-  --ink: #0b1e30;
-  --navy: #16324f;
-  --navy-soft: #1f4262;
+  --ink: #000000;
+  --navy: #0a1420;
+  --navy-soft: #11233a;
   --chalk: #f4f7f5;
   --chalk-dim: #dce4e2;
   --yellow: #ffc847;
   --teal: #4fb3a9;
   --coral: #e85d4c;
-  --line: rgba(244, 247, 245, 0.1);
-  --line-strong: rgba(244, 247, 245, 0.16);
+  --line: rgba(244, 247, 245, 0.08);
+  --line-strong: rgba(244, 247, 245, 0.14);
   --radius: 10px;
   --radius-sm: 6px;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.18), 0 10px 28px -14px rgba(0, 0, 0, 0.5);
