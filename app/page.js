@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import Header from '../components/Header';
 import Nav from '../components/Nav';
 import ReportCard from '../components/ReportCard';
@@ -99,6 +100,9 @@ export default function BrowsePage() {
           <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} onClick={() => setView('resolved')}>
             Resolved ({resolved.length})
           </button>
+          <Link href="/my-interests" className="filter-btn" style={{ textDecoration: 'none' }}>
+            Following
+          </Link>
         </div>
 
         {loaded && visible.length === 0 && (

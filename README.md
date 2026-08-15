@@ -91,9 +91,10 @@ reports, suggest changes, or register interest.
 
 - **Browse** (`/`) -- map centered on SF with a colored dot per report
   (blue for active, yellow for resolved -- matching those status
-  badges' colors elsewhere), a search box, and Active / Resolved pill
-  tabs. Each report card shows its photo, category, interest count,
-  and an "I'm interested" toggle.
+  badges' colors elsewhere), a search box, and Active / Resolved /
+  Following pills -- Active and Resolved filter the list in place,
+  Following links out to `/my-interests`. Each report card shows its
+  photo, category, interest count, and an "I'm interested" toggle.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
   for context, alongside your own pin in yellow once you place one.
@@ -131,8 +132,8 @@ reports, suggest changes, or register interest.
     and every account you're allowed to manage: edit display name, ban/
     unban, and (admin+ only) change role via a dropdown.
 - **Account** (`/account`) -- set your display name, request moderator
-  access, links to your public profile / submissions / follows, sign out,
-  and turn two-factor authentication on or off.
+  access, links to your public profile / submissions, sign out, and
+  turn two-factor authentication on or off.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
 - **My interests** (`/my-interests`) -- every report you're following,
