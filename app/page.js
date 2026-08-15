@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
 import { matchesSearch } from '../lib/searchReports';
 import { SF_CENTER } from '../lib/constants';
+import { escapeHtml } from '../lib/escapeHtml';
 
 export default function BrowsePage() {
   const user = useUser();
@@ -108,11 +109,4 @@ export default function BrowsePage() {
       </div>
     </main>
   );
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }

@@ -9,6 +9,7 @@ import { useProfile } from '../../lib/useProfile';
 import { uploadImage } from '../../lib/uploadImage';
 import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
+import { escapeHtml } from '../../lib/escapeHtml';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -59,10 +60,31 @@ export default function SubmitPage() {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
+
+      const dotIcon = (color) =>
+        L.divIcon({
+          className: '',
+          html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid rgba(0,0,0,0.45);box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+
+      const { data: approved } = await supabase
+        .from('suggestions')
+        .select('title, lat, lng')
+        .eq('status', 'approved');
+      (approved || []).forEach((r) => {
+        if (r.lat != null && r.lng != null) {
+          L.marker([r.lat, r.lng], { icon: dotIcon('var(--teal)') })
+            .addTo(map)
+            .bindPopup(`<b>${escapeHtml(r.title)}</b>`);
+        }
+      });
+
       map.on('click', (e) => {
         setCoords(e.latlng);
         if (markerRef.current) map.removeLayer(markerRef.current);
-        markerRef.current = L.marker(e.latlng).addTo(map);
+        markerRef.current = L.marker(e.latlng, { icon: dotIcon('var(--yellow)') }).addTo(map);
       });
       mapInstance.current = map;
       if (navigator.geolocation) {
@@ -238,7 +260,11 @@ export default function SubmitPage() {
 
         <label>Location</label>
         <div ref={mapRef} id="submitMap" />
-        <p className="hint">Tap the map to drop a pin at the location.</p>
+        <p className="hint">
+          Tap the map to drop a pin at the location.{' '}
+          <span style={{ color: 'var(--teal)' }}>●</span> existing approved reports ·{' '}
+          <span style={{ color: 'var(--yellow)' }}>●</span> your new pin
+        </p>
         <div className="coords">
           {coords ? `Pin set: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : 'No pin placed yet'}
         </div>
