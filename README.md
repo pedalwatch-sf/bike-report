@@ -109,7 +109,8 @@ reports, suggest changes, or register interest.
     and every account you're allowed to manage: edit display name, ban/
     unban, and (admin+ only) change role via a dropdown.
 - **Account** (`/account`) -- set your display name, request moderator
-  access, links to your public profile / submissions / follows, sign out.
+  access, links to your public profile / submissions / follows, sign out,
+  and turn two-factor authentication on or off.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
 - **My interests** (`/my-interests`) -- every report you're following,
@@ -185,6 +186,19 @@ afterward, so the repo always shows what's actually running.
   checks compare `role_level(caller) vs role_level(target)` rather than
   matching literal role strings, so adding the `owner` role above `admin`
   didn't require touching most of the authorization logic.
+- **Optional TOTP two-factor authentication**, enforced at the database,
+  not just the login screen. Any account can turn on 2FA from `/account`
+  (Supabase's built-in TOTP MFA -- scan a QR code with an authenticator
+  app or Apple Passwords). A restrictive RLS policy on every table
+  requires an `aal2` session (i.e. the login's second factor was actually
+  verified) for any account that has a verified factor enrolled, via a
+  `SECURITY DEFINER` helper (`user_has_verified_mfa`) rather than
+  granting the `authenticated` role direct access to `auth.mfa_factors`,
+  which holds the actual TOTP secrets. Accounts that haven't enrolled are
+  completely unaffected. This only covers RLS-governed direct table
+  access -- the privileged `SECURITY DEFINER` RPCs listed above bypass
+  RLS by design (same as everywhere else in this app) and don't
+  currently re-check `aal` themselves.
 
 ## Running it locally
 
