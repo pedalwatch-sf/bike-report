@@ -8,7 +8,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_ADDRESS = "Project PedalWatch <onboarding@resend.dev>";
-const SITE_URL = "https://bike-report-ten.vercel.app";
+const SITE_URL = "https://bike-report-omega.vercel.app";
 
 Deno.serve(async (req: Request) => {
   try {
