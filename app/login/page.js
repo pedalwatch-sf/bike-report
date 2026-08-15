@@ -109,6 +109,7 @@ export default function LoginPage() {
               <Turnstile
                 ref={resetCaptcha}
                 siteKey={TURNSTILE_SITE_KEY}
+                options={{ theme: 'dark' }}
                 onSuccess={(token) => setResetCaptchaToken(token)}
                 onExpire={() => setResetCaptchaToken('')}
               />
@@ -183,6 +184,7 @@ export default function LoginPage() {
             <Turnstile
               ref={captcha}
               siteKey={TURNSTILE_SITE_KEY}
+              options={{ theme: 'dark' }}
               onSuccess={(token) => setCaptchaToken(token)}
               onExpire={() => setCaptchaToken('')}
             />

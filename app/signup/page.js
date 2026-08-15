@@ -53,6 +53,7 @@ export default function SignupPage() {
             <Turnstile
               ref={captcha}
               siteKey={TURNSTILE_SITE_KEY}
+              options={{ theme: 'dark' }}
               onSuccess={(token) => setCaptchaToken(token)}
               onExpire={() => setCaptchaToken('')}
             />
