@@ -245,6 +245,14 @@ afterward, so the repo always shows what's actually running.
   access -- the privileged `SECURITY DEFINER` RPCs listed above bypass
   RLS by design (same as everywhere else in this app) and don't
   currently re-check `aal` themselves.
+- **Abuse protection on submissions and uploads.** The `submission-images`
+  storage bucket only accepts uploads from signed-in, non-banned accounts
+  (`to authenticated`, checked against `is_banned`), capped at 10MB and
+  image MIME types only -- it was previously open to anyone, signed in or
+  not, with no size or type limit at all. `suggestions` and
+  `change_suggestions` each have a `BEFORE INSERT` trigger capping a
+  single account to 10 inserts per rolling hour, to blunt scripted spam
+  without affecting a real person submitting several genuine reports.
 
 ## Running it locally
 

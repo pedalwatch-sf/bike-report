@@ -29,6 +29,7 @@ export default function ReportDetailPage({ params }) {
   const [changeImages, setChangeImages] = useState([]);
   const [suggestingChange, setSuggestingChange] = useState(false);
   const [changeSent, setChangeSent] = useState(false);
+  const [changeError, setChangeError] = useState('');
 
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -94,12 +95,14 @@ export default function ReportDetailPage({ params }) {
   async function submitChangeSuggestion() {
     if (!changeMessage.trim()) return;
     setSuggestingChange(true);
+    setChangeError('');
     let image_urls = null;
     if (changeImages.length > 0) {
       try {
         image_urls = await Promise.all(changeImages.map(uploadImage));
       } catch (uploadError) {
         setSuggestingChange(false);
+        setChangeError('Image upload failed: ' + uploadError.message);
         return;
       }
     }
@@ -111,11 +114,13 @@ export default function ReportDetailPage({ params }) {
       image_urls,
     });
     setSuggestingChange(false);
-    if (!error) {
-      setChangeMessage('');
-      setChangeImages([]);
-      setChangeSent(true);
+    if (error) {
+      setChangeError(error.message);
+      return;
     }
+    setChangeMessage('');
+    setChangeImages([]);
+    setChangeSent(true);
   }
 
   if (report === undefined) {
@@ -215,6 +220,7 @@ export default function ReportDetailPage({ params }) {
                     {suggestingChange ? 'Sending…' : 'Send suggestion'}
                   </button>
                 </div>
+                {changeError && <p className="hint" style={{ color: 'var(--coral)', marginTop: 8 }}>{changeError}</p>}
               </>
             )}
           </div>
