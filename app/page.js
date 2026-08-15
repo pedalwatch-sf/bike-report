@@ -14,6 +14,7 @@ export default function BrowsePage() {
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState('active');
   const [myInterests, setMyInterests] = useState(new Set());
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -68,6 +69,7 @@ export default function BrowsePage() {
   const filtered = suggestions.filter((s) => matchesSearch(s, search));
   const active = filtered.filter((s) => s.status === 'approved');
   const resolved = filtered.filter((s) => s.status === 'resolved');
+  const visible = view === 'active' ? active : resolved;
 
   return (
     <main>
@@ -82,23 +84,27 @@ export default function BrowsePage() {
           placeholder="Search reports by title, description, or category…"
           style={{ marginBottom: 14 }}
         />
-        {loaded && active.length === 0 && (
+        <div className="filter-row">
+          <button className={`filter-btn ${view === 'active' ? 'active' : ''}`} onClick={() => setView('active')}>
+            Active ({active.length})
+          </button>
+          <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} onClick={() => setView('resolved')}>
+            Resolved ({resolved.length})
+          </button>
+        </div>
+
+        {loaded && visible.length === 0 && (
           <div className="empty">
-            {search.trim() ? 'No reports match your search.' : <>No active reports yet.<br />Be the first to submit one.</>}
+            {search.trim()
+              ? 'No reports match your search.'
+              : view === 'active'
+              ? <>No active reports yet.<br />Be the first to submit one.</>
+              : 'No resolved reports yet.'}
           </div>
         )}
-        {active.map((s) => (
+        {visible.map((s) => (
           <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
         ))}
-
-        {resolved.length > 0 && (
-          <>
-            <p className="hint" style={{ margin: '18px 0 10px' }}>Resolved</p>
-            {resolved.map((s) => (
-              <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
-            ))}
-          </>
-        )}
       </div>
     </main>
   );
