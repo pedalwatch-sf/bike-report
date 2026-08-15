@@ -12,6 +12,7 @@ export default function InterestButton({ suggestionId, count, following: initial
   const [error, setError] = useState('');
 
   async function toggle() {
+    if (following && !window.confirm('Stop following this report? You will no longer get updates about it.')) return;
     setSaving(true);
     setError('');
     const rpc = following ? 'unregister_interest' : 'register_interest';
