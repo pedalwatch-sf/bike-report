@@ -60,6 +60,16 @@ reports or suggested changes.
   any status, with a Withdraw button on each.
 - **My interests** (`/my-interests`) -- every report you're following.
 
+## Database schema
+
+`supabase/migrations/` holds every schema change (tables, RLS policies,
+functions) applied to the live database, in order, each as a plain SQL
+file named `<timestamp>_<name>.sql`. It's kept in sync with Supabase's
+own migration history rather than being the source of truth Supabase
+reads from -- when a new database change is made, the SQL gets applied
+directly to the live project and the matching file gets added here
+afterward, so the repo always shows what's actually running.
+
 ## Deploying an update
 
 Since this is already on GitHub and connected to Vercel: update the file(s)
