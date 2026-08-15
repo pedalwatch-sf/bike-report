@@ -151,7 +151,7 @@ export default function ReportDetailPage({ params }) {
 
         <div className="card">
           <ImageGallery images={report.report_images} />
-          {report.status === 'resolved' && <span className="badge resolved">Resolved</span>}
+          <span className={`badge ${report.status}`}>{report.status}</span>
           <span className="badge cat">{report.category}</span>
           <h3>{report.title}</h3>
           <p>{report.description}</p>
