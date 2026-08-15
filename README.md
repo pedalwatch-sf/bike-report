@@ -166,7 +166,12 @@ reports, suggest changes, or register interest.
   (see "Full audit log for staff activity" below) -- invisible to the
   profile's owner and to plain-user viewers.
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
-  Auth email/password forms.
+  Auth email/password forms. Sign in has a "Forgot password?" link that
+  emails a reset link (CAPTCHA-protected, same as sign in/up) through
+  Supabase Auth's own email delivery; the link lands on `/reset-password`
+  to set a new one. See "Password reset setup" under one-time setup
+  steps -- the redirect target needs to be allow-listed in Supabase or
+  the emailed link won't land where it should.
 
 Every page except the `/kitten` easter egg also shows a small footer
 with a contact email and Instagram link.
@@ -323,7 +328,7 @@ Since this is already on GitHub and connected to Vercel: update the file(s)
 on GitHub (via the pencil-edit icon, or by uploading a replacement file)
 and commit. Vercel redeploys automatically within a minute or two.
 
-## Three one-time setup steps
+## One-time setup steps
 
 ### 1. Point Supabase at your live URL
 
@@ -370,6 +375,21 @@ as not yet protective:
    protection, select Turnstile -- this is the private half, it's what
    lets Supabase's server verify a token is real; it never goes in the
    repo or any file, only into that one dashboard field
+
+### 4. Password reset setup
+
+`/login`'s "Forgot password?" link calls `supabase.auth.resetPasswordForEmail`
+with `redirectTo` pointed at `/reset-password` on whatever domain the
+site is running on. Supabase only honors a `redirectTo` that matches an
+entry in its Redirect URLs allow list -- anything else silently falls
+back to the bare Site URL from step 1, landing the emailed link on the
+homepage instead of the reset form.
+
+- Supabase dashboard -> Authentication -> URL Configuration -> Redirect URLs
+- Add `https://bike-report-omega.vercel.app/reset-password` (and
+  `http://localhost:3000/reset-password` too, for local dev)
+- Same hostname-dependency as step 1 and the CAPTCHA setup above --
+  update this if the app's domain ever changes
 
 ## A small easter egg
 
