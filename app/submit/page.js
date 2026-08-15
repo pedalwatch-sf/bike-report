@@ -28,6 +28,7 @@ export default function SubmitPage() {
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [showKitten, setShowKitten] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -100,6 +101,7 @@ export default function SubmitPage() {
       return;
     }
     setMessage('Submitted for review — thank you!');
+    setShowKitten(title.trim().toLowerCase() === 'kitten');
     setTitle('');
     setDescription('');
     setCategory(CATEGORIES[0]);
@@ -187,6 +189,14 @@ export default function SubmitPage() {
           </button>
         </div>
         {message && <p className="hint" style={{ marginTop: 10 }}>{message}</p>}
+        {showKitten && (
+          <img
+            src="/IMG_0400.jpeg"
+            alt="A surprise kitten"
+            className="card-image"
+            style={{ marginTop: 12 }}
+          />
+        )}
       </div>
     </main>
   );
