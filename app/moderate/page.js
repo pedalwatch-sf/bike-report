@@ -7,14 +7,11 @@ import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 import { uploadImage } from '../../lib/uploadImage';
 import { matchesSearch } from '../../lib/searchReports';
+import { roleLevel } from '../../lib/roles';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved'];
 const ROLES = ['user', 'moderator', 'admin'];
 const SF_CENTER = [37.7749, -122.4194];
-
-function roleLevel(role) {
-  return role === 'admin' ? 3 : role === 'moderator' ? 2 : 1;
-}
 
 export default function ModeratePage() {
   const user = useUser();
@@ -44,13 +41,13 @@ export default function ModeratePage() {
   async function loadProfile() {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
-    if (data && (data.role === 'moderator' || data.role === 'admin')) {
+    if (data && roleLevel(data.role) >= 2) {
       loadReports();
       loadChangeSuggestions();
       loadTimelineEvents();
       loadUsers();
     }
-    if (data && data.role === 'admin') {
+    if (data && roleLevel(data.role) >= 3) {
       loadRequests();
     }
   }
@@ -306,8 +303,8 @@ export default function ModeratePage() {
     );
   }
 
-  const isModOrAdmin = profile && (profile.role === 'moderator' || profile.role === 'admin');
-  const isAdmin = profile?.role === 'admin';
+  const isModOrAdmin = profile && roleLevel(profile.role) >= 2;
+  const isAdmin = profile && roleLevel(profile.role) >= 3;
   const visibleReports = reports
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
     .filter((r) => matchesSearch(r, reportSearch));
@@ -399,7 +396,7 @@ export default function ModeratePage() {
             )}
 
             <p className="hint" style={{ margin: '14px 0' }}>
-              {isAdmin ? "All accounts — manage anyone below admin level." : 'Accounts you can moderate.'}
+              {isAdmin ? "All accounts — manage anyone below your level." : 'Accounts you can moderate.'}
             </p>
             {users.length === 0 && <div className="empty">No accounts yet.</div>}
             {users.map((u) => {

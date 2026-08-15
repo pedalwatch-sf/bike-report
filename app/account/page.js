@@ -87,6 +87,7 @@ export default function AccountPage() {
         <div className="card">
           <h3>{user.email}</h3>
           <div className="meta">
+            {profile?.role === 'owner' && 'Owner account'}
             {profile?.role === 'admin' && 'Admin account'}
             {profile?.role === 'moderator' && 'Moderator'}
             {profile?.role === 'user' && profile?.moderator_status === 'pending' && 'Moderator request pending'}
