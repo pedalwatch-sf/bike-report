@@ -86,13 +86,11 @@ reports, suggest changes, or register interest.
   Active / Resolved sections. Each report card shows its photo, category,
   interest count, and an "I'm interested" toggle.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
-  map. Warns you before submitting if there's already a same-category
-  report within ~75m -- checks both approved reports and other users'
-  still-pending ones (which a plain query can't see past RLS, so this
-  goes through a narrow RPC) -- in case it's a duplicate; you can still
-  submit anyway. A synchronous lock stops a double-click or slow tap
-  from creating two rows. Submitting a report titled exactly "kitten"
-  is a hidden shortcut -- see the easter egg section.
+  map. Warns you before submitting if there's already an approved,
+  same-category report within ~75m, in case it's a duplicate; you can
+  still submit anyway. A synchronous lock stops a double-click or slow
+  tap from creating two rows. Submitting a report titled exactly
+  "kitten" is a hidden shortcut -- see the easter egg section.
 - **Report detail** (`/report/[id]`) -- full photo gallery (horizontal
   scroll for multiple photos, tap any photo for a fullscreen lightbox
   with next/prev), location, progress timeline, who reported it (links
@@ -104,7 +102,9 @@ reports, suggest changes, or register interest.
     withdrawn) or search by title/description/category; edit any field
     including the location map and photos; approve/reject/resolve/
     reopen/delete; manage the progress timeline; view the interested-email
-    list for a report.
+    list for a report. Flags a pending report with a warning when
+    another pending, same-category report is within ~75m, so likely
+    duplicate submissions in the queue are easy to spot and consolidate.
   - *Suggested changes* -- review user-submitted change notes and photos
     alongside the original report, pull a suggested photo onto the
     report with one click.
