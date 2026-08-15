@@ -144,7 +144,9 @@ reports, suggest changes, or register interest.
     report with one click.
   - *User accounts* -- pending moderator-access requests (admin+ only),
     and every account you're allowed to manage: edit display name, ban/
-    unban, and (admin+ only) change role via a dropdown.
+    unban, and (admin+ only) change role via a dropdown. Two pill rows
+    filter the list -- one by status (unconfirmed / banned / requested
+    moderator), one by role -- both default to all and combine together.
 - **Account** (`/account`) -- set your display name, request moderator
   access, links to your public profile / submissions, sign out, and
   turn two-factor authentication on or off.
