@@ -196,7 +196,6 @@ export default function AccountPage() {
           <div style={{ marginTop: 16 }} className="row">
             <a className="btn outline" href={`/profile/${user.id}`}>View public profile</a>
             <a className="btn outline" href="/my-reports">My submissions</a>
-            <a className="btn outline" href="/my-interests">Reports I&apos;m following</a>
             <button className="btn outline" onClick={signOut}>Sign out</button>
           </div>
         </div>
