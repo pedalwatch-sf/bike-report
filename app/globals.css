@@ -375,3 +375,13 @@ textarea { min-height: 80px; resize: vertical; }
 }
 .thumb-remove { background: rgba(11, 30, 48, 0.8); color: var(--chalk); }
 .thumb-add { top: auto; bottom: 2px; background: var(--teal); color: var(--ink); font-weight: 700; }
+.site-footer {
+  border-top: 1px solid var(--line-strong);
+  padding: 20px;
+  text-align: center;
+  color: var(--chalk-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.site-footer p { margin: 0; }
