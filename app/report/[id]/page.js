@@ -21,6 +21,7 @@ export default function ReportDetailPage({ params }) {
   const [report, setReport] = useState(undefined); // undefined = loading, null = not found
   const [reporter, setReporter] = useState(null);
   const [updates, setUpdates] = useState([]);
+  const [following, setFollowing] = useState(false);
 
   const [changeMessage, setChangeMessage] = useState('');
   const [changeImages, setChangeImages] = useState([]);
@@ -40,6 +41,17 @@ export default function ReportDetailPage({ params }) {
     if (report) drawMap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report]);
+
+  useEffect(() => {
+    if (user) loadFollowing();
+    else setFollowing(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, id]);
+
+  async function loadFollowing() {
+    const { data } = await supabase.rpc('get_my_subscriptions');
+    setFollowing((data || []).some((r) => r.suggestion_id === id));
+  }
 
   async function loadReport() {
     const { data } = await supabase
@@ -153,7 +165,7 @@ export default function ReportDetailPage({ params }) {
             )}
           </div>
           {report.lat && report.lng && <div ref={mapRef} id="map" />}
-          <InterestButton suggestionId={report.id} count={report.subscribers?.[0]?.count ?? 0} />
+          <InterestButton suggestionId={report.id} count={report.subscribers?.[0]?.count ?? 0} following={following} />
         </div>
 
         <p className="hint" style={{ margin: '18px 0 10px' }}>Progress timeline</p>
