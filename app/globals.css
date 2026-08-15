@@ -214,6 +214,7 @@ h1 {
 .badge.approved { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
 .badge.rejected { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
 .badge.resolved { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
+.badge.withdrawn { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
 .badge.role-owner { background: var(--yellow); color: var(--ink); }
 .badge.role-admin { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
 .badge.role-moderator { background: rgba(79, 179, 169, 0.18); color: var(--teal); }

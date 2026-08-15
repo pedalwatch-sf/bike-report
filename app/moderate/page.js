@@ -11,7 +11,7 @@ import { matchesSearch } from '../../lib/searchReports';
 import { roleLevel } from '../../lib/roles';
 import { SF_CENTER } from '../../lib/constants';
 
-const STATUSES = ['pending', 'approved', 'rejected', 'resolved'];
+const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
 
 export default function ModeratePage() {
