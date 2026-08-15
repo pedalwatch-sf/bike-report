@@ -385,3 +385,6 @@ textarea { min-height: 80px; resize: vertical; }
   letter-spacing: 0.04em;
 }
 .site-footer p { margin: 0; }
+.site-footer p + p { margin-top: 6px; }
+.site-footer a { color: var(--teal); text-decoration: none; }
+.site-footer a:hover { text-decoration: underline; }

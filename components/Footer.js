@@ -9,6 +9,13 @@ export default function Footer() {
   return (
     <footer className="site-footer">
       <p>© {new Date().getFullYear()} Project PedalWatch</p>
+      <p>
+        <a href="mailto:pedalwatchsf@gmail.com">pedalwatchsf@gmail.com</a>
+        {' · '}
+        <a href="https://instagram.com/pedalwatchsf" target="_blank" rel="noopener noreferrer">
+          @pedalwatchsf
+        </a>
+      </p>
     </footer>
   );
 }
