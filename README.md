@@ -178,8 +178,8 @@ row ownership (role hierarchy, masking a column for some viewers,
 looking up another user by id) go through `SECURITY DEFINER` Postgres
 functions instead, each doing its own authorization check internally:
 
-`is_admin`, `is_moderator_or_admin`, `is_banned`, `role_level` (internal
-helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
+`is_admin`, `is_moderator_or_admin`, `is_banned`, `is_owner`, `role_level`
+(internal helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
 `request_moderator_access`, `moderator_set_display_name`,
 `moderator_set_banned` (account management)
 · `set_display_name`, `get_public_profile`, `get_public_profiles` (your
@@ -261,7 +261,9 @@ afterward, so the repo always shows what's actually running.
   the IP comes from `X-Forwarded-For`, which Supabase's edge proxy sets
   itself from the real connection, not something a client can spoof by
   sending a fake header. Both the per-account and per-IP checks exempt
-  the owner account by email so normal use/testing never trips them.
+  the `owner` role (via `is_owner()`, matching how every other privileged
+  check in this app is relative to role rather than a specific account)
+  so normal use/testing never trips them.
   Sign-in and sign-up also render a Cloudflare Turnstile CAPTCHA widget
   (`lib/constants.js` -> `TURNSTILE_SITE_KEY`), though it's currently
   wired to Cloudflare's public test key and does nothing server-side
