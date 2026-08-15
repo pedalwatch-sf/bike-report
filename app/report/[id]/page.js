@@ -11,6 +11,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { useProfile } from '../../../lib/useProfile';
 import { uploadImage } from '../../../lib/uploadImage';
 import { dotIcon } from '../../../lib/leafletDotIcon';
+import { statusLabel } from '../../../lib/statusLabel';
 
 const ACTIVE_STATUSES = ['approved', 'resolved'];
 
@@ -151,7 +152,7 @@ export default function ReportDetailPage({ params }) {
 
         <div className="card">
           <ImageGallery images={report.report_images} />
-          <span className={`badge ${report.status}`}>{report.status}</span>
+          <span className={`badge ${report.status}`}>{statusLabel(report.status)}</span>
           <span className="badge cat">{report.category}</span>
           <h3>{report.title}</h3>
           <p>{report.description}</p>
