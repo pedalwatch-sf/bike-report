@@ -76,8 +76,9 @@ own level, including their own.
   `/my-reports` -- this doesn't delete it, it just moves it to a
   `withdrawn` status moderators can still see. Each account also gets a
   public profile page (`/profile/[id]`) listing their approved/resolved
-  reports and an optional display name -- their email is never shown
-  publicly.
+  reports and their display name (required and unique since sign-up now
+  collects one -- accounts created before that don't necessarily have
+  one) -- their email is never shown publicly.
 - **Moderators** review pending submissions from the Moderate page: edit
   any field (including dragging the location pin on a map), add or remove
   photos, approve/reject/resolve/reopen, delete reports outright, and post
@@ -159,19 +160,23 @@ reports, suggest changes, or register interest.
     account), newest first. See "Full audit log for staff activity" in
     the Security model section below for what's recorded and how it's
     locked down.
-- **Account** (`/account`) -- set your display name, request moderator
-  access, links to your public profile / submissions, sign out, and
-  turn two-factor authentication on or off.
+- **Account** (`/account`) -- change your display name (still unique,
+  same as sign-up), request moderator access, links to your public
+  profile / submissions, sign out, and turn two-factor authentication on
+  or off.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
 - **Profile** (`/profile/[id]`) -- anyone's public reporting history
-  (approved/resolved reports only, plus an optional display name). When
+  (approved/resolved reports only, plus their display name). When
   viewed by a moderator or above, an additional Activity section shows
   that account's own suggestion/moderation activity from the audit log
   (see "Full audit log for staff activity" below) -- invisible to the
   profile's owner and to plain-user viewers.
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
-  Auth email/password forms. Sign in has a "Forgot password?" link that
+  Auth email/password forms. Sign-up also requires a display name
+  (checked for uniqueness before submitting, and enforced again at the
+  database level) -- see "Unique display names" under Security model.
+  Sign in has a "Forgot password?" link that
   emails a reset link (CAPTCHA-protected, same as sign in/up) through
   Supabase Auth's own email delivery; the link lands on `/reset-password`
   to set a new one. See "Password reset setup" under one-time setup
@@ -220,7 +225,11 @@ in one round trip, used on Browse and Moderate) · `get_timeline_updates`, `get_
 report, cleared one report at a time as you actually open it rather
 than all at once; a report counts as updated if its status changed or
 a new timeline entry was posted since) ·
-`handle_new_user` (creates a profile row on signup) · `get_public_stats`
+`handle_new_user` (creates a profile row on signup, now requiring and
+validating the display name passed in through `signUp`'s `options.data`)
+· `is_display_name_taken` (anon-callable availability pre-check used by
+sign-up, before the uniqueness check that actually matters -- the
+database-level unique index -- ever runs) · `get_public_stats`
 (aggregate-only counts for `/impact`; intentionally has no
 authorization check since it never returns row content) ·
 `log_activity`, `get_activity_log`, `get_user_activity_log` (the audit
@@ -240,6 +249,18 @@ afterward, so the repo always shows what's actually running.
 
 ## Security model
 
+- **Unique display names.** Sign-up now requires one and rejects a
+  duplicate (case- and whitespace-insensitive) before creating the
+  account -- previously optional and unenforced, which made "who
+  reported it" attribution ambiguous. The real enforcement is a partial
+  unique index on `profiles (lower(trim(display_name)))` that skips
+  nulls, so it doesn't touch any pre-existing account that has no
+  display name; every future rename (self-service `set_display_name` or
+  moderator-driven `moderator_set_display_name`) is bound by the same
+  index and rejected the same way if it would collide. `is_display_name_taken`
+  is an anon-callable pre-check the sign-up form calls before submitting,
+  purely for a fast, clear error message -- the index is what actually
+  prevents a race between two simultaneous sign-ups with the same name.
 - **RLS is the real security boundary**, not the API key. `lib/supabaseClient.js`
   hardcodes the project URL and anon key client-side on purpose -- Supabase's
   anon key is meant to be public; what it's allowed to do is entirely

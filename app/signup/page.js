@@ -8,22 +8,43 @@ import { TURNSTILE_SITE_KEY } from '../../lib/constants';
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
   const captcha = useRef();
 
   async function handleSignup() {
+    const name = displayName.trim();
     if (!email.trim() || password.length < 6) {
       setMessage('Enter an email and a password with at least 6 characters.');
       return;
     }
+    if (!name) {
+      setMessage('Choose a display name.');
+      return;
+    }
+    if (name.length > 60) {
+      setMessage('Display name must be 60 characters or fewer.');
+      return;
+    }
     setBusy(true);
     setMessage('');
+    const { data: taken, error: takenError } = await supabase.rpc('is_display_name_taken', { p_name: name });
+    if (takenError) {
+      setBusy(false);
+      setMessage(takenError.message);
+      return;
+    }
+    if (taken) {
+      setBusy(false);
+      setMessage('That display name is already taken.');
+      return;
+    }
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { captchaToken },
+      options: { captchaToken, data: { display_name: name } },
     });
     captcha.current?.reset();
     setCaptchaToken('');
@@ -49,6 +70,9 @@ export default function SignupPage() {
           <label>Password</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <p className="hint">At least 6 characters.</p>
+          <label>Display name</label>
+          <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} />
+          <p className="hint">Shown publicly on your reports. Must be unique.</p>
           <div style={{ marginTop: 16 }}>
             <Turnstile
               ref={captcha}
@@ -59,7 +83,7 @@ export default function SignupPage() {
             />
           </div>
           <div style={{ marginTop: 16 }}>
-            <button className="btn" onClick={handleSignup} disabled={busy || !captchaToken}>
+            <button className="btn" onClick={handleSignup} disabled={busy || !captchaToken || !displayName.trim()}>
               {busy ? 'Creating…' : 'Create account'}
             </button>
           </div>
