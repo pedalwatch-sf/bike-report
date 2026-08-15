@@ -656,8 +656,14 @@ export default function ModeratePage() {
 
                   <div className="meta">
                     {s.lat?.toFixed(4)}, {s.lng?.toFixed(4)} · {new Date(s.submitted_at).toLocaleString()}
-                    {' · reported by '}
-                    {s.reporter_display_name || 'Community member'}
+                    {s.user_id && (
+                      <>
+                        {' · reported by '}
+                        <a href={`/profile/${s.user_id}`} style={{ color: 'var(--teal)' }}>
+                          {s.reporter_display_name || 'Community member'}
+                        </a>
+                      </>
+                    )}
                   </div>
 
                   {!edit && s.status === 'pending' && (
