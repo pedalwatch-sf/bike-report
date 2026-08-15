@@ -250,12 +250,11 @@ textarea { min-height: 80px; resize: vertical; }
   flex-shrink: 0;
 }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.thumb-remove {
+.thumb-remove,
+.thumb-add {
   position: absolute;
   top: 2px;
   right: 2px;
-  background: rgba(11, 30, 48, 0.8);
-  color: var(--chalk);
   border: none;
   border-radius: 50%;
   width: 20px;
@@ -265,3 +264,5 @@ textarea { min-height: 80px; resize: vertical; }
   cursor: pointer;
   padding: 0;
 }
+.thumb-remove { background: rgba(11, 30, 48, 0.8); color: var(--chalk); }
+.thumb-add { top: auto; bottom: 2px; background: var(--teal); color: var(--ink); font-weight: 700; }
