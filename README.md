@@ -288,7 +288,7 @@ Auth emails (like signup confirmations) need to know where your site
 actually lives:
 
 - Supabase dashboard -> Authentication -> URL Configuration
-- Set Site URL to your Vercel URL (e.g. https://bike-report-ten.vercel.app)
+- Set Site URL to your Vercel URL (e.g. https://bike-report-omega.vercel.app)
 
 ### 2. Make yourself the owner
 
