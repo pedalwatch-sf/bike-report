@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import InterestButton from './InterestButton';
 
-export default function ReportCard({ report: s }) {
+export default function ReportCard({ report: s, following, onFollowingChange }) {
   return (
     <div className="card">
       <Link href={`/report/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -12,7 +12,12 @@ export default function ReportCard({ report: s }) {
         <p>{s.description}</p>
         <div className="meta">Reported {new Date(s.submitted_at).toLocaleDateString()}</div>
       </Link>
-      <InterestButton suggestionId={s.id} count={s.subscribers?.[0]?.count ?? 0} />
+      <InterestButton
+        suggestionId={s.id}
+        count={s.subscribers?.[0]?.count ?? 0}
+        following={following}
+        onChange={onFollowingChange}
+      />
     </div>
   );
 }

@@ -5,19 +5,32 @@ import Header from '../components/Header';
 import Nav from '../components/Nav';
 import ReportCard from '../components/ReportCard';
 import { supabase } from '../lib/supabaseClient';
+import { useUser } from '../lib/useUser';
 import { matchesSearch } from '../lib/searchReports';
 import { SF_CENTER } from '../lib/constants';
 
 export default function BrowsePage() {
+  const user = useUser();
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
+  const [myInterests, setMyInterests] = useState(new Set());
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
   useEffect(() => {
     loadSuggestions();
   }, []);
+
+  useEffect(() => {
+    if (user) loadMyInterests();
+    else setMyInterests(new Set());
+  }, [user]);
+
+  async function loadMyInterests() {
+    const { data } = await supabase.rpc('get_my_subscriptions');
+    setMyInterests(new Set((data || []).map((r) => r.suggestion_id)));
+  }
 
   useEffect(() => {
     if (loaded) drawMap();
@@ -75,14 +88,14 @@ export default function BrowsePage() {
           </div>
         )}
         {active.map((s) => (
-          <ReportCard key={s.id} report={s} />
+          <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
         ))}
 
         {resolved.length > 0 && (
           <>
             <p className="hint" style={{ margin: '18px 0 10px' }}>Resolved</p>
             {resolved.map((s) => (
-              <ReportCard key={s.id} report={s} />
+              <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
             ))}
           </>
         )}

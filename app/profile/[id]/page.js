@@ -5,18 +5,31 @@ import Header from '../../../components/Header';
 import Nav from '../../../components/Nav';
 import ReportCard from '../../../components/ReportCard';
 import { supabase } from '../../../lib/supabaseClient';
+import { useUser } from '../../../lib/useUser';
 
 export default function ProfilePage({ params }) {
   const { id } = params;
+  const viewer = useUser();
 
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = not found
   const [reports, setReports] = useState([]);
+  const [myInterests, setMyInterests] = useState(new Set());
 
   useEffect(() => {
     loadProfile();
     loadReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (viewer) loadMyInterests();
+    else setMyInterests(new Set());
+  }, [viewer]);
+
+  async function loadMyInterests() {
+    const { data } = await supabase.rpc('get_my_subscriptions');
+    setMyInterests(new Set((data || []).map((r) => r.suggestion_id)));
+  }
 
   async function loadProfile() {
     const { data } = await supabase.rpc('get_public_profile', { p_user_id: id });
@@ -70,7 +83,7 @@ export default function ProfilePage({ params }) {
         </p>
         {reports.length === 0 && <div className="empty">No public reports yet.</div>}
         {reports.map((s) => (
-          <ReportCard key={s.id} report={s} />
+          <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
         ))}
       </div>
     </main>

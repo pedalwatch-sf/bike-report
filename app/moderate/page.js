@@ -32,6 +32,7 @@ export default function ModeratePage() {
   const [timelineEvents, setTimelineEvents] = useState([]);
   const [eventDrafts, setEventDrafts] = useState({});
   const [newEventText, setNewEventText] = useState({});
+  const [subscriberLists, setSubscriberLists] = useState({});
 
   const [message, setMessage] = useState('');
 
@@ -56,9 +57,19 @@ export default function ModeratePage() {
   async function loadReports() {
     const { data } = await supabase
       .from('suggestions')
-      .select('*, report_images(id, url)')
+      .select('*, report_images(id, url), subscribers(count)')
       .order('submitted_at', { ascending: false });
     setReports(data || []);
+  }
+
+  async function toggleSubscribers(id) {
+    if (subscriberLists[id] !== undefined) {
+      setSubscriberLists((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      return;
+    }
+    setSubscriberLists((prev) => ({ ...prev, [id]: null })); // null = loading
+    const { data, error } = await supabase.rpc('get_report_subscribers', { target_suggestion_id: id });
+    setSubscriberLists((prev) => ({ ...prev, [id]: error ? [] : data || [] }));
   }
 
   async function loadChangeSuggestions() {
@@ -576,6 +587,26 @@ export default function ModeratePage() {
                   <div className="meta">
                     {s.lat?.toFixed(4)}, {s.lng?.toFixed(4)} · {new Date(s.submitted_at).toLocaleString()}
                   </div>
+
+                  {!edit && (s.subscribers?.[0]?.count ?? 0) > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      <button className="btn outline" onClick={() => toggleSubscribers(s.id)}>
+                        Interested ({s.subscribers[0].count})
+                      </button>
+                      {subscriberLists[s.id] === null && <p className="hint" style={{ marginTop: 6 }}>Loading…</p>}
+                      {Array.isArray(subscriberLists[s.id]) && (
+                        <div className="hint" style={{ marginTop: 6 }}>
+                          {subscriberLists[s.id].length === 0 ? (
+                            'No one yet.'
+                          ) : (
+                            subscriberLists[s.id].map((sub, i) => (
+                              <div key={i}>{sub.email}</div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="row">
                     {!edit && <button className="btn outline" onClick={() => startEdit(s)}>Edit</button>}

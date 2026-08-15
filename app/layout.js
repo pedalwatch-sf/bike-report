@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Route Report — Bike Infrastructure Tracker',
+  title: 'Project PedalWatch',
   description: 'Community-submitted bike lane infrastructure reports',
 };
 

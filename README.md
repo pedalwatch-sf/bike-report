@@ -16,11 +16,12 @@ own level, including their own.
   search them, and view a report's photos, location, and progress
   timeline.
 - **Signed-in users** can submit a report (title, category, location pin,
-  optional photo), and suggest changes to any active report (a note, plus
-  optional photos) for a moderator to review. Each account also gets a
-  public profile page (`/profile/[id]`) listing their approved/resolved
-  reports and an optional display name -- their email is never shown
-  publicly.
+  optional photo), suggest changes to any active report (a note, plus
+  optional photos) for a moderator to review, and follow reports by
+  tapping "I'm interested" to track them on their own `/my-interests`
+  page. Each account also gets a public profile page (`/profile/[id]`)
+  listing their approved/resolved reports and an optional display name
+  -- their email is never shown publicly.
 - **Moderators** review pending submissions from the Moderate page: edit
   any field (including dragging the location pin on a map), add or remove
   photos, approve/reject/resolve/reopen, delete reports outright, and post
@@ -55,6 +56,9 @@ reports or suggested changes.
 - **Account** (`/account`) -- set your display name, request moderator
   access, sign out.
 - **Profile** (`/profile/[id]`) -- anyone's public reporting history.
+- **My submissions** (`/my-reports`) -- everything you've submitted,
+  any status, with a Withdraw button on each.
+- **My interests** (`/my-interests`) -- every report you're following.
 
 ## Deploying an update
 
