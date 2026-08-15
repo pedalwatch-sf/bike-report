@@ -1,21 +1,60 @@
 # Route Report
 
-Your bike infrastructure tracker, backed by Supabase for the database,
-image storage, and now real user accounts.
+Your bike infrastructure tracker for SF. People flag bike lanes, crossings,
+racks, and signage that need attention; you and your moderators review and
+track them through to resolution. Backed by Supabase for the database,
+image storage, and user accounts.
 
-## How access works now
+## How access works
 
-- **Anyone** can browse approved reports.
-- **Signed-in users** can submit a report (with an optional photo) and see
-  their own submissions.
-- **Moderators** can review pending submissions, edit them, and
-  approve/reject.
-- **Admin** (that's you) approves who becomes a moderator, from a queue on
-  the Moderate page.
+Accounts have a role, ranked low to high: **user → moderator → admin →
+owner**. Each level can manage accounts strictly below it (edit their
+display name, ban them) -- nobody can touch an account at or above their
+own level, including their own.
 
-There's no more shared passcode. Permissions are enforced by Supabase's
-Row Level Security rules directly on the database, based on who's signed
-in -- so there's nothing secret sitting in the code anymore.
+- **Anyone**, signed in or not, can browse approved and resolved reports,
+  search them, and view a report's photos, location, and progress
+  timeline.
+- **Signed-in users** can submit a report (title, category, location pin,
+  optional photo), and suggest changes to any active report (a note, plus
+  optional photos) for a moderator to review. Each account also gets a
+  public profile page (`/profile/[id]`) listing their approved/resolved
+  reports and an optional display name -- their email is never shown
+  publicly.
+- **Moderators** review pending submissions from the Moderate page: edit
+  any field (including dragging the location pin on a map), add or remove
+  photos, approve/reject/resolve/reopen, delete reports outright, and post
+  or edit the progress-timeline entries visitors see on a report. They also
+  review suggested changes (including pulling a suggested photo onto the
+  report with one click) and can edit/ban accounts below their level.
+- **Admins** additionally approve moderator requests and can promote or
+  demote anyone below admin level.
+- **Owner** (that's you) sits above admin -- it can manage admin accounts
+  too, which regular admins can't do to each other. It's not a role
+  anyone can grant through the UI; see "Making yourself the owner" below.
+
+Permissions are enforced by Supabase Row Level Security directly on the
+database, based on who's signed in and their role -- there's no shared
+passcode and nothing secret sitting in the code.
+
+A banned account can still sign in and browse, but can't submit new
+reports or suggested changes.
+
+## What's on each page
+
+- **Browse** (`/`) -- map centered on SF, a search box, and separated
+  Active / Resolved sections.
+- **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
+  map. Warns you before submitting if there's already a similar report
+  near that pin.
+- **Report detail** (`/report/[id]`) -- full photo gallery, location,
+  progress timeline, who reported it (links to their profile), and a
+  "suggest a change" box for signed-in users.
+- **Moderate** (`/moderate`) -- Reports / Suggested changes / User
+  accounts tabs, gated by role.
+- **Account** (`/account`) -- set your display name, request moderator
+  access, sign out.
+- **Profile** (`/profile/[id]`) -- anyone's public reporting history.
 
 ## Deploying an update
 
@@ -31,24 +70,34 @@ Auth emails (like signup confirmations) need to know where your site
 actually lives:
 
 - Supabase dashboard -> Authentication -> URL Configuration
-- Set Site URL to your Vercel URL (e.g. https://route-report.vercel.app)
+- Set Site URL to your Vercel URL (e.g. https://bike-report-ten.vercel.app)
 
-### 2. Make yourself the admin
+### 2. Make yourself the owner
 
-There's intentionally no self-serve way to become admin -- someone has to
-be the first one, manually:
+There's intentionally no self-serve way to become a moderator, admin, or
+owner -- someone has to be the first one, manually:
 
 1. Go to your live site and create an account (Sign in -> Create account)
    using the email you want to administer with
-2. Tell Claude that email address, and it'll grant that account admin
-   rights directly in the database
+2. Tell Claude that email address, and it'll grant that account the
+   `owner` role directly in the database
 
-After that, your Moderate tab will show a queue of anyone who requests
-moderator access, with Approve/Deny buttons.
+After that, your Moderate tab's User accounts section will show a queue
+of anyone who requests moderator access, with Approve/Deny buttons, and
+you'll be able to promote/demote/ban anyone below owner level, including
+other admins.
+
+## A small easter egg
+
+Submitting a report titled exactly "kitten" doesn't create a report at
+all -- it redirects to a blank page with a photo on it. Harmless, just
+there.
 
 ## Cleaning up (optional)
 
 The SUPABASE_SERVICE_ROLE_KEY and MODERATOR_PASSCODE environment
-variables in Vercel are no longer used by the app. They're harmless to
-leave, but you can remove them from Vercel's Project Settings ->
-Environment Variables if you'd like to tidy up.
+variables in Vercel, and the `/api/moderate/list` and `/api/moderate/update`
+routes in the code, are leftover from an earlier passcode-based version
+and aren't used anymore. They're harmless to leave, but you can remove the
+Vercel env vars from Project Settings -> Environment Variables, or delete
+the two route files, if you'd like to tidy up.
