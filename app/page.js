@@ -28,24 +28,21 @@ export default function BrowsePage() {
   }, []);
 
   useEffect(() => {
-    if (user) loadMyInterests();
-    else setMyInterests(new Set());
+    if (user) {
+      loadFollowing();
+    } else if (user === null) {
+      setMyInterests(new Set());
+      setFollowingReports([]);
+      setUpdatedIds(new Set());
+    }
   }, [user]);
 
-  async function loadMyInterests() {
-    const { data } = await supabase.rpc('get_my_subscriptions');
-    setMyInterests(new Set((data || []).map((r) => r.suggestion_id)));
-  }
-
-  useEffect(() => {
-    if (view !== 'following' || user === undefined) return;
-    if (user) loadFollowingReports();
-    else setFollowingReports([]);
-  }, [view, user]);
-
-  async function loadFollowingReports() {
+  // Loaded eagerly (not just when the Following pill is opened) so its
+  // count and "Updated" dot are accurate as soon as Browse loads.
+  async function loadFollowing() {
     const { data: subs } = await supabase.rpc('get_my_subscriptions');
     const ids = (subs || []).map((s) => s.suggestion_id);
+    setMyInterests(new Set(ids));
     if (ids.length === 0) {
       setFollowingReports([]);
       setUpdatedIds(new Set());
@@ -66,7 +63,6 @@ export default function BrowsePage() {
           .map((s) => s.suggestion_id)
       )
     );
-    supabase.rpc('mark_subscriptions_seen');
   }
 
   useEffect(() => {
@@ -135,6 +131,7 @@ export default function BrowsePage() {
           </button>
           <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} onClick={() => setView('following')}>
             Following{Array.isArray(followingReports) ? ` (${followingReports.length})` : ''}
+            {updatedIds.size > 0 && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
           </button>
         </div>
 
@@ -165,7 +162,14 @@ export default function BrowsePage() {
                   following
                   updated={updatedIds.has(r.id)}
                   onFollowingChange={(nowFollowing) => {
-                    if (!nowFollowing) setFollowingReports((prev) => prev.filter((x) => x.id !== r.id));
+                    if (!nowFollowing) {
+                      setFollowingReports((prev) => prev.filter((x) => x.id !== r.id));
+                      setUpdatedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(r.id);
+                        return next;
+                      });
+                    }
                   }}
                 />
               ))}
