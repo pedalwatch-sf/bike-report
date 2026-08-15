@@ -94,9 +94,10 @@ reports, suggest changes, or register interest.
   Following pills, all filtering the same page in place. Following
   lists every report you've registered interest in, any status, with
   an "Updated" badge on ones whose status changed since you last
-  checked -- a small dot appears on the Browse tab in the nav bar so
-  you notice without switching pills first, both clear once you view
-  the list. Each report card shows its photo, category, interest
+  opened them, and a small dot on the Following pill itself so you
+  notice without opening it first -- each clears individually once you
+  actually open that report, not all at once. Each report card shows
+  its photo, category, interest
   count, and an "I'm interested" toggle.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
@@ -176,9 +177,10 @@ public profile) · `get_timeline_updates`, `get_all_timeline_updates_for_moderat
 (progress timeline, with author email masked for non-moderators) ·
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
 `unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`,
-`mark_subscriptions_seen` (the interest-follow feature, plus the
+`mark_subscription_seen` (the interest-follow feature, plus the
 in-app "updated" indicator -- `subscriber_identities.last_seen_status`
-tracks the status each follower last saw per report) ·
+tracks the status each follower last saw per report, cleared one report
+at a time as you actually open it, not all at once) ·
 `handle_new_user` (creates a profile row on signup) · `get_public_stats`
 (aggregate-only counts for `/impact`; intentionally has no
 authorization check since it never returns row content).

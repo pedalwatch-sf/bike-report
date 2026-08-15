@@ -52,7 +52,9 @@ export default function ReportDetailPage({ params }) {
 
   async function loadFollowing() {
     const { data } = await supabase.rpc('get_my_subscriptions');
-    setFollowing((data || []).some((r) => r.suggestion_id === id));
+    const isFollowing = (data || []).some((r) => r.suggestion_id === id);
+    setFollowing(isFollowing);
+    if (isFollowing) supabase.rpc('mark_subscription_seen', { target_suggestion_id: id });
   }
 
   async function loadReport() {
