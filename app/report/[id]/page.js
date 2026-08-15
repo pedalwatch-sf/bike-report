@@ -14,7 +14,7 @@ const ACTIVE_STATUSES = ['approved', 'resolved'];
 
 export default function ReportDetailPage({ params }) {
   const { id } = params;
-  const { user } = useProfile();
+  const { user, profile } = useProfile();
   const router = useRouter();
 
   const [report, setReport] = useState(undefined); // undefined = loading, null = not found
@@ -172,7 +172,9 @@ export default function ReportDetailPage({ params }) {
         {user && ACTIVE_STATUSES.includes(report.status) && (
           <div className="card">
             <label>Suggest a change</label>
-            {changeSent ? (
+            {profile?.banned ? (
+              <p className="hint">Your account has been restricted from suggesting changes.</p>
+            ) : changeSent ? (
               <p className="hint">Thanks — a moderator will review your suggestion.</p>
             ) : (
               <>

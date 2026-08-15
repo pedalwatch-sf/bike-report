@@ -6,10 +6,15 @@ import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 import { uploadImage } from '../../lib/uploadImage';
+import { matchesSearch } from '../../lib/searchReports';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved'];
 const ROLES = ['user', 'moderator', 'admin'];
 const SF_CENTER = [37.7749, -122.4194];
+
+function roleLevel(role) {
+  return role === 'admin' ? 3 : role === 'moderator' ? 2 : 1;
+}
 
 export default function ModeratePage() {
   const user = useUser();
@@ -18,10 +23,12 @@ export default function ModeratePage() {
 
   const [reports, setReports] = useState([]);
   const [statusFilter, setStatusFilter] = useState('pending');
+  const [reportSearch, setReportSearch] = useState('');
   const [editing, setEditing] = useState({});
 
   const [users, setUsers] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [nameDrafts, setNameDrafts] = useState({});
   const [changeSuggestions, setChangeSuggestions] = useState([]);
 
   const [timelineEvents, setTimelineEvents] = useState([]);
@@ -41,9 +48,9 @@ export default function ModeratePage() {
       loadReports();
       loadChangeSuggestions();
       loadTimelineEvents();
+      loadUsers();
     }
     if (data && data.role === 'admin') {
-      loadUsers();
       loadRequests();
     }
   }
@@ -147,6 +154,34 @@ export default function ModeratePage() {
     }
     loadUsers();
     loadRequests();
+  }
+
+  async function toggleBan(id, banned) {
+    if (banned && !window.confirm('Ban this account? They will no longer be able to submit reports or suggestions.')) return;
+    setMessage('');
+    const { error } = await supabase.rpc('moderator_set_banned', { target_id: id, new_banned: banned });
+    if (error) setMessage(error.message);
+    loadUsers();
+  }
+
+  function startNameEdit(u) {
+    setNameDrafts((prev) => ({ ...prev, [u.id]: u.display_name || '' }));
+  }
+  function cancelNameEdit(id) {
+    setNameDrafts((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  }
+  async function saveNameEdit(id) {
+    setMessage('');
+    const { error } = await supabase.rpc('moderator_set_display_name', {
+      target_id: id,
+      new_name: nameDrafts[id] || '',
+    });
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    cancelNameEdit(id);
+    loadUsers();
   }
 
   function startEdit(s) {
@@ -273,7 +308,9 @@ export default function ModeratePage() {
 
   const isModOrAdmin = profile && (profile.role === 'moderator' || profile.role === 'admin');
   const isAdmin = profile?.role === 'admin';
-  const visibleReports = statusFilter === 'all' ? reports : reports.filter((r) => r.status === statusFilter);
+  const visibleReports = reports
+    .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+    .filter((r) => matchesSearch(r, reportSearch));
   const changesByReport = {};
   changeSuggestions.forEach((cs) => {
     (changesByReport[cs.suggestion_id] ||= []).push(cs);
@@ -318,14 +355,12 @@ export default function ModeratePage() {
             >
               Suggested changes {changeSuggestions.length > 0 && `(${changeSuggestions.length})`}
             </button>
-            {isAdmin && (
-              <button
-                className={`filter-btn ${section === 'users' ? 'active' : ''}`}
-                onClick={() => setSection('users')}
-              >
-                User accounts
-              </button>
-            )}
+            <button
+              className={`filter-btn ${section === 'users' ? 'active' : ''}`}
+              onClick={() => setSection('users')}
+            >
+              User accounts
+            </button>
           </div>
         )}
 
@@ -346,9 +381,9 @@ export default function ModeratePage() {
           </>
         )}
 
-        {isAdmin && section === 'users' && (
+        {isModOrAdmin && section === 'users' && (
           <>
-            {requests.length > 0 && (
+            {isAdmin && requests.length > 0 && (
               <>
                 <p className="hint" style={{ margin: '4px 0 10px' }}>Pending moderator requests</p>
                 {requests.map((r) => (
@@ -364,39 +399,84 @@ export default function ModeratePage() {
             )}
 
             <p className="hint" style={{ margin: '14px 0' }}>
-              All accounts — change a user&apos;s role directly.
+              {isAdmin ? "All accounts — manage anyone below admin level." : 'Accounts you can moderate.'}
             </p>
             {users.length === 0 && <div className="empty">No accounts yet.</div>}
-            {users.map((u) => (
-              <div className="card" key={u.id}>
-                <h3>{u.email}</h3>
-                {u.display_name && <div className="meta" style={{ marginBottom: 8 }}>{u.display_name}</div>}
-                <span className={`badge role-${u.role}`}>{u.role}</span>
-                {u.moderator_status && u.moderator_status !== 'none' && (
-                  <span className="badge cat">Moderator request: {u.moderator_status}</span>
-                )}
-                <div className="meta">Joined {new Date(u.created_at).toLocaleDateString()}</div>
-                <div className="row" style={{ marginTop: 8 }}>
-                  <a className="btn outline" href={`/profile/${u.id}`}>View public profile</a>
-                  {ROLES.map((role) => (
-                    <button
-                      key={role}
-                      className={`btn ${u.role === role ? 'teal' : 'outline'}`}
-                      disabled={u.id === user.id}
-                      onClick={() => setUserRole(u.id, role)}
-                    >
-                      Make {role}
-                    </button>
-                  ))}
+            {users.map((u) => {
+              const canManage = roleLevel(u.role) < roleLevel(profile.role);
+              const nameDraft = nameDrafts[u.id];
+              return (
+                <div className="card" key={u.id}>
+                  <h3>{u.email}</h3>
+                  {nameDraft !== undefined ? (
+                    <div style={{ marginBottom: 8 }}>
+                      <input
+                        type="text"
+                        value={nameDraft}
+                        onChange={(e) => setNameDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                        maxLength={60}
+                      />
+                      <div className="row" style={{ marginTop: 6 }}>
+                        <button className="btn outline" onClick={() => saveNameEdit(u.id)}>Save</button>
+                        <button className="btn outline" onClick={() => cancelNameEdit(u.id)}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    u.display_name && <div className="meta" style={{ marginBottom: 8 }}>{u.display_name}</div>
+                  )}
+                  <span className={`badge role-${u.role}`}>{u.role}</span>
+                  {u.banned && <span className="badge banned">Banned</span>}
+                  {u.moderator_status && u.moderator_status !== 'none' && (
+                    <span className="badge cat">Moderator request: {u.moderator_status}</span>
+                  )}
+                  <div className="meta">Joined {new Date(u.created_at).toLocaleDateString()}</div>
+                  <div className="row" style={{ marginTop: 8 }}>
+                    <a className="btn outline" href={`/profile/${u.id}`}>View public profile</a>
+                    {canManage && nameDraft === undefined && (
+                      <button className="btn outline" onClick={() => startNameEdit(u)}>Edit name</button>
+                    )}
+                    {canManage && (
+                      <button
+                        className={u.banned ? 'btn teal' : 'btn coral'}
+                        onClick={() => toggleBan(u.id, !u.banned)}
+                      >
+                        {u.banned ? 'Unban' : 'Ban'}
+                      </button>
+                    )}
+                  </div>
+                  {isAdmin && canManage && (
+                    <div className="row" style={{ marginTop: 8 }}>
+                      {ROLES.map((role) => (
+                        <button
+                          key={role}
+                          className={`btn ${u.role === role ? 'teal' : 'outline'}`}
+                          onClick={() => setUserRole(u.id, role)}
+                        >
+                          Make {role}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!canManage && (
+                    <p className="hint" style={{ marginTop: 6 }}>
+                      {u.id === user.id ? "You can't manage your own account." : "You can't manage this account."}
+                    </p>
+                  )}
                 </div>
-                {u.id === user.id && <p className="hint" style={{ marginTop: 6 }}>You can&apos;t change your own role.</p>}
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
 
         {isModOrAdmin && section === 'reports' && (
           <>
+            <input
+              type="text"
+              value={reportSearch}
+              onChange={(e) => setReportSearch(e.target.value)}
+              placeholder="Search reports by title, description, or category…"
+              style={{ marginTop: 14 }}
+            />
             <div className="filter-row">
               {['all', ...STATUSES].map((f) => (
                 <button
@@ -409,7 +489,9 @@ export default function ModeratePage() {
               ))}
             </div>
 
-            {visibleReports.length === 0 && <div className="empty">No reports in this view.</div>}
+            {visibleReports.length === 0 && (
+              <div className="empty">{reportSearch.trim() ? 'No reports match your search.' : 'No reports in this view.'}</div>
+            )}
             {visibleReports.map((s) => {
               const edit = editing[s.id];
               return (
