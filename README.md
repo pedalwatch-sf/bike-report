@@ -11,6 +11,9 @@ image storage, and user accounts, and deployed on Vercel.
 - **Supabase** for Postgres, Auth, and Storage -- no separate backend server
 - **Leaflet** (loaded via CDN stylesheet + npm package) for every map: Browse,
   Submit, and the location editor in Moderate
+- **Vitest** for unit tests on the pure `lib/` helpers (`npm test`), run
+  automatically on every push/PR via GitHub Actions (`.github/workflows/ci.yml`,
+  alongside `npm run build`)
 - Plain CSS in `app/globals.css` (no CSS framework), dark theme, custom
   properties for color/radius/shadow tokens. The two accent colors are
   `--yellow` (`#f3af49`) and `--teal` (`#5982c0`, a complementary blue
@@ -42,9 +45,11 @@ lib/                   supabaseClient, useUser/useProfile hooks, and
                         escaping, the colored map-pin icon factory,
                         status label text, and batched reporter-name
                         lookup
+  __tests__/             Vitest unit tests for the helpers above
 public/                Static assets -- logo.png (header mark + browser
                         favicon) and logosolid.png
 supabase/migrations/   Full schema history, see "Database schema" below
+.github/workflows/     CI -- build + test on every push/PR
 ```
 
 ## How access works
