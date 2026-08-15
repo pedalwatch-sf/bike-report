@@ -13,9 +13,86 @@ export default function AccountPage() {
   const [displayName, setDisplayName] = useState('');
   const [savingName, setSavingName] = useState(false);
 
+  const [factors, setFactors] = useState([]);
+  const [mfaStage, setMfaStage] = useState('idle'); // idle | enrolling
+  const [factorId, setFactorId] = useState('');
+  const [qrCode, setQrCode] = useState('');
+  const [secret, setSecret] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaMessage, setMfaMessage] = useState('');
+
   useEffect(() => {
-    if (user) loadProfile();
+    if (user) {
+      loadProfile();
+      loadFactors();
+    }
   }, [user]);
+
+  async function loadFactors() {
+    const { data } = await supabase.auth.mfa.listFactors();
+    setFactors((data?.totp || []).filter((f) => f.status === 'verified'));
+  }
+
+  async function startEnroll() {
+    setMfaMessage('');
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) {
+      setMfaMessage(error.message);
+      return;
+    }
+    setFactorId(data.id);
+    setQrCode(data.totp.qr_code);
+    setSecret(data.totp.secret);
+    setMfaStage('enrolling');
+  }
+
+  async function verifyEnroll() {
+    setMfaBusy(true);
+    setMfaMessage('');
+    const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId });
+    if (challengeError) {
+      setMfaBusy(false);
+      setMfaMessage(challengeError.message);
+      return;
+    }
+    const { error: verifyError } = await supabase.auth.mfa.verify({
+      factorId,
+      challengeId: challenge.id,
+      code: verifyCode.trim(),
+    });
+    setMfaBusy(false);
+    if (verifyError) {
+      setMfaMessage(verifyError.message);
+      return;
+    }
+    setMfaStage('idle');
+    setVerifyCode('');
+    loadFactors();
+  }
+
+  async function cancelEnroll() {
+    if (factorId) {
+      await supabase.auth.mfa.unenroll({ factorId });
+    }
+    setMfaStage('idle');
+    setVerifyCode('');
+    setQrCode('');
+    setSecret('');
+    setFactorId('');
+    setMfaMessage('');
+  }
+
+  async function disableFactor(id) {
+    if (!window.confirm('Turn off two-factor authentication?')) return;
+    setMfaMessage('');
+    const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
+    if (error) {
+      setMfaMessage(error.message);
+      return;
+    }
+    loadFactors();
+  }
 
   async function loadProfile() {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
@@ -122,6 +199,50 @@ export default function AccountPage() {
             <a className="btn outline" href="/my-interests">Reports I&apos;m following</a>
             <button className="btn outline" onClick={signOut}>Sign out</button>
           </div>
+        </div>
+
+        <div className="card">
+          <h3>Two-factor authentication</h3>
+          {factors.length > 0 ? (
+            <>
+              <p className="hint">Enabled — {factors[0].friendly_name || 'Authenticator app'}</p>
+              <button className="btn coral" onClick={() => disableFactor(factors[0].id)}>Turn off</button>
+            </>
+          ) : mfaStage === 'enrolling' ? (
+            <>
+              <p className="hint">
+                Scan this QR code with an authenticator app (Apple Passwords, Google
+                Authenticator, 1Password, etc.), then enter the code it shows.
+              </p>
+              {qrCode && (
+                <img
+                  src={qrCode}
+                  alt="Scan to set up two-factor authentication"
+                  style={{ background: '#fff', padding: 8, borderRadius: 'var(--radius-sm)' }}
+                />
+              )}
+              <p className="coords">Can&apos;t scan? Enter this key manually: {secret}</p>
+              <label>Verification code</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value.trim())}
+              />
+              <div className="row" style={{ marginTop: 10 }}>
+                <button className="btn" onClick={verifyEnroll} disabled={mfaBusy || !verifyCode}>
+                  {mfaBusy ? 'Verifying…' : 'Enable'}
+                </button>
+                <button className="btn outline" onClick={cancelEnroll}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="hint">Not enabled. Add an authenticator app for an extra step at sign-in.</p>
+              <button className="btn outline" onClick={startEnroll}>Enable 2FA</button>
+            </>
+          )}
+          {mfaMessage && <p className="hint" style={{ color: 'var(--coral)', marginTop: 10 }}>{mfaMessage}</p>}
         </div>
       </div>
     </main>
