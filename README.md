@@ -319,11 +319,20 @@ Sign-in and sign-up already render a Turnstile widget, but it's pointed
 at Cloudflare's public test key and Supabase isn't yet requiring the
 token, so it's not doing anything protective until both of these are done:
 
-1. Create a site at [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile)
-   and copy its **Sitekey** and **Secret key**
-2. Replace `TURNSTILE_SITE_KEY` in `lib/constants.js` with your real Sitekey
-3. Supabase dashboard -> Authentication -> Bot and Abuse Protection ->
-   enable CAPTCHA protection, select Turnstile, paste in your Secret key
+1. Create a site at [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile),
+   registering `bike-report-omega.vercel.app` as its hostname (add
+   `localhost` too if you want the widget to work in local dev) --
+   Turnstile only validates for hostnames a site is registered under,
+   so if the app's domain ever changes, update it here too, not just
+   in Supabase's Site URL (see step 1 above)
+2. Copy the **Sitekey** and replace `TURNSTILE_SITE_KEY` in
+   `lib/constants.js` with it -- this is the public half, safe to
+   commit, it's what tells the browser which Turnstile site to render
+3. Copy the **Secret key** and paste it into Supabase dashboard ->
+   Authentication -> Bot and Abuse Protection -> enable CAPTCHA
+   protection, select Turnstile -- this is the private half, it's what
+   lets Supabase's server verify a token is real; it never goes in the
+   repo or any file, only into that one dashboard field
 
 ## A small easter egg
 
