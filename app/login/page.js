@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Turnstile } from '@marsidev/react-turnstile';
 import Header from '../../components/Header';
 import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
+import { TURNSTILE_SITE_KEY } from '../../lib/constants';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,12 +15,20 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState('form'); // form | mfa
   const [mfaCode, setMfaCode] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  const captcha = useRef();
   const router = useRouter();
 
   async function handleLogin() {
     setBusy(true);
     setMessage('');
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+      options: { captchaToken },
+    });
+    captcha.current?.reset();
+    setCaptchaToken('');
     if (error) {
       setBusy(false);
       setMessage(error.message);
@@ -110,7 +120,15 @@ export default function LoginPage() {
           <label>Password</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           <div style={{ marginTop: 16 }}>
-            <button className="btn" onClick={handleLogin} disabled={busy}>
+            <Turnstile
+              ref={captcha}
+              siteKey={TURNSTILE_SITE_KEY}
+              onSuccess={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken('')}
+            />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <button className="btn" onClick={handleLogin} disabled={busy || !captchaToken}>
               {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </div>

@@ -254,6 +254,18 @@ afterward, so the repo always shows what's actually running.
   `change_suggestions` each have a `BEFORE INSERT` trigger capping a
   single account to 10 inserts per rolling hour, to blunt scripted spam
   without affecting a real person submitting several genuine reports.
+  A per-account limit alone is easy to route around by creating more
+  accounts, so there's also a per-IP limit (20/hour on the same two
+  write paths) via a PostgREST `pre-request` function
+  (`public.check_request`, registered on the `authenticator` role) --
+  the IP comes from `X-Forwarded-For`, which Supabase's edge proxy sets
+  itself from the real connection, not something a client can spoof by
+  sending a fake header. Both the per-account and per-IP checks exempt
+  the owner account by email so normal use/testing never trips them.
+  Sign-in and sign-up also render a Cloudflare Turnstile CAPTCHA widget
+  (`lib/constants.js` -> `TURNSTILE_SITE_KEY`), though it's currently
+  wired to Cloudflare's public test key and does nothing server-side
+  until the two manual steps in "CAPTCHA setup" below are done.
 
 ## Running it locally
 
@@ -274,7 +286,7 @@ Since this is already on GitHub and connected to Vercel: update the file(s)
 on GitHub (via the pencil-edit icon, or by uploading a replacement file)
 and commit. Vercel redeploys automatically within a minute or two.
 
-## Two one-time setup steps
+## Three one-time setup steps
 
 ### 1. Point Supabase at your live URL
 
@@ -298,6 +310,18 @@ After that, your Moderate tab's User accounts section will show a queue
 of anyone who requests moderator access, with Approve/Deny buttons, and
 you'll be able to promote/demote/ban anyone below owner level, including
 other admins.
+
+### 3. CAPTCHA setup
+
+Sign-in and sign-up already render a Turnstile widget, but it's pointed
+at Cloudflare's public test key and Supabase isn't yet requiring the
+token, so it's not doing anything protective until both of these are done:
+
+1. Create a site at [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile)
+   and copy its **Sitekey** and **Secret key**
+2. Replace `TURNSTILE_SITE_KEY` in `lib/constants.js` with your real Sitekey
+3. Supabase dashboard -> Authentication -> Bot and Abuse Protection ->
+   enable CAPTCHA protection, select Turnstile, paste in your Secret key
 
 ## A small easter egg
 
