@@ -11,15 +11,7 @@ import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
 import { escapeHtml } from '../../lib/escapeHtml';
 import { dotIcon } from '../../lib/leafletDotIcon';
-
-const CATEGORIES = [
-  'New bike lane needed',
-  'Existing lane needs repair',
-  'Intersection safety',
-  'Signage / markings',
-  'Bike parking',
-  'Other',
-];
+import { CATEGORIES } from '../../lib/categories';
 
 async function findNearbyReports(lat, lng) {
   const { data } = await supabase

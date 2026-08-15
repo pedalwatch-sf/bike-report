@@ -34,11 +34,15 @@ app/                  Next.js App Router pages (one folder per route)
   profile/[id]/           Anyone's public reporting history
   login/, signup/         Auth forms
   kitten/                 The easter egg (see below)
-components/            Shared UI: Header, Nav, ReportCard, ImageGallery,
-                        InterestButton
-lib/                   supabaseClient, useUser/useProfile hooks, small
-                        helpers (search matching, image upload, role
-                        levels, SF map center)
+components/            Shared UI: Header, Nav, Footer, ReportCard,
+                        ImageGallery, InterestButton
+lib/                   supabaseClient, useUser/useProfile hooks, and
+                        small helpers -- category list, search matching,
+                        image upload, role levels, SF map center,
+                        haversine distance/duplicate radius, HTML
+                        escaping, and the colored map-pin icon factory
+public/                Static assets -- logo.png (header mark + browser
+                        favicon) and logosolid.png
 supabase/migrations/   Full schema history, see "Database schema" below
 ```
 
@@ -129,6 +133,9 @@ reports, suggest changes, or register interest.
   (approved/resolved reports only, plus an optional display name).
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
   Auth email/password forms.
+
+Every page except the `/kitten` easter egg also shows a small footer
+with a contact email and Instagram link.
 
 ## Data model
 
