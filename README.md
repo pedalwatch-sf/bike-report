@@ -136,7 +136,10 @@ reports, suggest changes, or register interest.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
 - **My interests** (`/my-interests`) -- every report you're following,
-  with the same toggle to unfollow.
+  with the same toggle to unfollow. A report whose status changed since
+  you last checked shows an "Updated" badge, and a small dot appears on
+  the Account tab in the nav bar so you notice without visiting this
+  page first -- both clear once you view the list.
 - **Profile** (`/profile/[id]`) -- anyone's public reporting history
   (approved/resolved reports only, plus an optional display name).
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
@@ -173,11 +176,13 @@ helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
 public profile) · `get_timeline_updates`, `get_all_timeline_updates_for_moderation`
 (progress timeline, with author email masked for non-moderators) ·
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
-`unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`
-(the interest-follow feature) · `handle_new_user` (creates a profile row
-on signup) · `get_public_stats` (aggregate-only counts for `/impact`;
-intentionally has no authorization check since it never returns row
-content).
+`unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`,
+`mark_subscriptions_seen` (the interest-follow feature, plus the
+in-app "updated" indicator -- `subscriber_identities.last_seen_status`
+tracks the status each follower last saw per report) ·
+`handle_new_user` (creates a profile row on signup) · `get_public_stats`
+(aggregate-only counts for `/impact`; intentionally has no
+authorization check since it never returns row content).
 
 ## Database schema
 

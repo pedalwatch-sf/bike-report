@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import InterestButton from './InterestButton';
 
-export default function ReportCard({ report: s, following, onFollowingChange }) {
+export default function ReportCard({ report: s, following, onFollowingChange, updated }) {
   return (
     <div className="card">
       <Link href={`/report/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
         {s.report_images?.[0]?.url && <img src={s.report_images[0].url} alt="" className="card-image" />}
+        {updated && <span className="badge" style={{ background: 'rgba(232, 93, 76, 0.18)', color: 'var(--coral)' }}>● Updated</span>}
         {s.status === 'resolved' && <span className="badge resolved">Resolved</span>}
         <span className="badge cat">{s.category}</span>
         <h3>{s.title}</h3>
