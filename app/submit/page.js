@@ -55,6 +55,7 @@ export default function SubmitPage() {
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -107,6 +108,7 @@ export default function SubmitPage() {
 
     setSubmitting(true);
     setMessage('');
+    setJustSubmitted(false);
 
     let image_url = null;
     if (imageFile) {
@@ -142,6 +144,7 @@ export default function SubmitPage() {
       await supabase.from('report_images').insert({ suggestion_id: inserted.id, url: image_url });
     }
     setMessage('Submitted for review — thank you!');
+    setJustSubmitted(true);
     setTitle('');
     setDescription('');
     setCategory(CATEGORIES[0]);
@@ -243,7 +246,17 @@ export default function SubmitPage() {
             {submitting ? 'Submitting…' : 'Submit for review'}
           </button>
         </div>
-        {message && <p className="hint" style={{ marginTop: 10 }}>{message}</p>}
+        {message && (
+          <p className="hint" style={{ marginTop: 10 }}>
+            {message}
+            {justSubmitted && (
+              <>
+                {' '}
+                <a href="/my-reports" style={{ color: 'var(--teal)' }}>View your submissions</a>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </main>
   );
