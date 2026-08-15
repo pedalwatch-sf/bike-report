@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
 import { matchesSearch } from '../lib/searchReports';
 import { SF_CENTER } from '../lib/constants';
+import { escapeHtml } from '../lib/escapeHtml';
+import { dotIcon } from '../lib/leafletDotIcon';
 
 export default function BrowsePage() {
   const user = useUser();
@@ -60,7 +62,10 @@ export default function BrowsePage() {
     }).addTo(map);
     suggestions.forEach((s) => {
       if (s.lat && s.lng) {
-        L.marker([s.lat, s.lng]).addTo(map).bindPopup(`<b>${escapeHtml(s.title)}</b>`);
+        const color = s.status === 'resolved' ? 'var(--yellow)' : 'var(--teal)';
+        L.marker([s.lat, s.lng], { icon: dotIcon(L, color) })
+          .addTo(map)
+          .bindPopup(`<b>${escapeHtml(s.title)}</b>`);
       }
     });
     mapInstance.current = map;
@@ -77,6 +82,9 @@ export default function BrowsePage() {
       <Nav />
       <div className="content">
         <div ref={mapRef} id="map" />
+        <p className="hint" style={{ margin: '8px 0 14px' }}>
+          <span style={{ color: 'var(--teal)' }}>●</span> active · <span style={{ color: 'var(--yellow)' }}>●</span> resolved
+        </p>
         <input
           type="text"
           value={search}
@@ -108,11 +116,4 @@ export default function BrowsePage() {
       </div>
     </main>
   );
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }

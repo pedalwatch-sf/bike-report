@@ -8,6 +8,9 @@ import { supabase } from '../../lib/supabaseClient';
 import { useProfile } from '../../lib/useProfile';
 import { uploadImage } from '../../lib/uploadImage';
 import { SF_CENTER } from '../../lib/constants';
+import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
+import { escapeHtml } from '../../lib/escapeHtml';
+import { dotIcon } from '../../lib/leafletDotIcon';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -18,26 +21,17 @@ const CATEGORIES = [
   'Other',
 ];
 
-const DUPLICATE_RADIUS_METERS = 75;
-
-function haversineMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-async function findNearbyReports(lat, lng) {
+async function findNearbyReports(lat, lng, category) {
   const { data } = await supabase
     .from('suggestions')
-    .select('id, title, lat, lng')
+    .select('id, title, lat, lng, category')
     .eq('status', 'approved');
   return (data || []).filter(
-    (r) => r.lat != null && r.lng != null && haversineMeters(lat, lng, r.lat, r.lng) <= DUPLICATE_RADIUS_METERS
+    (r) =>
+      r.category === category &&
+      r.lat != null &&
+      r.lng != null &&
+      haversineMeters(lat, lng, r.lat, r.lng) <= DUPLICATE_RADIUS_METERS
   );
 }
 
@@ -47,6 +41,7 @@ export default function SubmitPage() {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
+  const submitLockRef = useRef(false);
 
   const [coords, setCoords] = useState(null);
   const [title, setTitle] = useState('');
@@ -66,10 +61,23 @@ export default function SubmitPage() {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
+
+      const { data: approved } = await supabase
+        .from('suggestions')
+        .select('title, lat, lng')
+        .eq('status', 'approved');
+      (approved || []).forEach((r) => {
+        if (r.lat != null && r.lng != null) {
+          L.marker([r.lat, r.lng], { icon: dotIcon(L, 'var(--teal)') })
+            .addTo(map)
+            .bindPopup(`<b>${escapeHtml(r.title)}</b>`);
+        }
+      });
+
       map.on('click', (e) => {
         setCoords(e.latlng);
         if (markerRef.current) map.removeLayer(markerRef.current);
-        markerRef.current = L.marker(e.latlng).addTo(map);
+        markerRef.current = L.marker(e.latlng, { icon: dotIcon(L, 'var(--yellow)') }).addTo(map);
       });
       mapInstance.current = map;
       if (navigator.geolocation) {
@@ -84,75 +92,84 @@ export default function SubmitPage() {
   }, [user]);
 
   async function handleSubmit() {
-    if (title.trim().toLowerCase() === 'kitten') {
-      router.push('/kitten');
-      return;
-    }
-    if (!title.trim() || !description.trim()) {
-      setMessage('Add a title and description first.');
-      return;
-    }
-    if (!coords) {
-      setMessage('Drop a pin on the map first.');
-      return;
-    }
-
-    const nearby = await findNearbyReports(coords.lat, coords.lng);
-    if (nearby.length > 0) {
-      const names = nearby.map((r) => `"${r.title}"`).join(', ');
-      const proceed = window.confirm(
-        `This looks close to an existing report: ${names}. Submit anyway as a possible duplicate?`
-      );
-      if (!proceed) return;
-    }
-
-    setSubmitting(true);
-    setMessage('');
-    setJustSubmitted(false);
-
-    let image_url = null;
-    if (imageFile) {
-      try {
-        image_url = await uploadImage(imageFile);
-      } catch (uploadError) {
-        setMessage('Image upload failed: ' + uploadError.message);
-        setSubmitting(false);
+    // Synchronous guard against double-clicks/taps landing before React
+    // re-renders the disabled button -- setSubmitting(true) alone leaves a
+    // brief window where a second click can still slip through.
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    try {
+      if (title.trim().toLowerCase() === 'kitten') {
+        router.push('/kitten');
         return;
       }
-    }
+      if (!title.trim() || !description.trim()) {
+        setMessage('Add a title and description first.');
+        return;
+      }
+      if (!coords) {
+        setMessage('Drop a pin on the map first.');
+        return;
+      }
 
-    const { data: inserted, error } = await supabase
-      .from('suggestions')
-      .insert({
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        lat: coords.lat,
-        lng: coords.lng,
-        status: 'pending',
-        user_id: user.id,
-      })
-      .select('id')
-      .single();
+      const nearby = await findNearbyReports(coords.lat, coords.lng, category);
+      if (nearby.length > 0) {
+        const names = nearby.map((r) => `"${r.title}"`).join(', ');
+        const proceed = window.confirm(
+          `This looks close to an existing report: ${names}. Submit anyway as a possible duplicate?`
+        );
+        if (!proceed) return;
+      }
 
-    setSubmitting(false);
-    if (error) {
-      setMessage('Something went wrong: ' + error.message);
-      return;
-    }
-    if (image_url) {
-      await supabase.from('report_images').insert({ suggestion_id: inserted.id, url: image_url });
-    }
-    setMessage('Submitted for review — thank you!');
-    setJustSubmitted(true);
-    setTitle('');
-    setDescription('');
-    setCategory(CATEGORIES[0]);
-    setImageFile(null);
-    setCoords(null);
-    if (markerRef.current && mapInstance.current) {
-      mapInstance.current.removeLayer(markerRef.current);
-      markerRef.current = null;
+      setSubmitting(true);
+      setMessage('');
+      setJustSubmitted(false);
+
+      let image_url = null;
+      if (imageFile) {
+        try {
+          image_url = await uploadImage(imageFile);
+        } catch (uploadError) {
+          setMessage('Image upload failed: ' + uploadError.message);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const { data: inserted, error } = await supabase
+        .from('suggestions')
+        .insert({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          lat: coords.lat,
+          lng: coords.lng,
+          status: 'pending',
+          user_id: user.id,
+        })
+        .select('id')
+        .single();
+
+      setSubmitting(false);
+      if (error) {
+        setMessage('Something went wrong: ' + error.message);
+        return;
+      }
+      if (image_url) {
+        await supabase.from('report_images').insert({ suggestion_id: inserted.id, url: image_url });
+      }
+      setMessage('Submitted for review — thank you!');
+      setJustSubmitted(true);
+      setTitle('');
+      setDescription('');
+      setCategory(CATEGORIES[0]);
+      setImageFile(null);
+      setCoords(null);
+      if (markerRef.current && mapInstance.current) {
+        mapInstance.current.removeLayer(markerRef.current);
+        markerRef.current = null;
+      }
+    } finally {
+      submitLockRef.current = false;
     }
   }
 
@@ -236,7 +253,11 @@ export default function SubmitPage() {
 
         <label>Location</label>
         <div ref={mapRef} id="submitMap" />
-        <p className="hint">Tap the map to drop a pin at the location.</p>
+        <p className="hint">
+          Tap the map to drop a pin at the location.{' '}
+          <span style={{ color: 'var(--teal)' }}>●</span> existing approved reports ·{' '}
+          <span style={{ color: 'var(--yellow)' }}>●</span> your new pin
+        </p>
         <div className="coords">
           {coords ? `Pin set: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : 'No pin placed yet'}
         </div>
