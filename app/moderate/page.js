@@ -28,6 +28,27 @@ function matchesAccountStatus(u, filter) {
 }
 const ELEVATION_FILTERS = ['all', 'user', 'moderator', 'admin', 'owner'];
 
+const ACTIVITY_LABELS = {
+  report_submitted: 'submitted a report',
+  report_status_changed: "changed a report's status",
+  report_edited: 'edited a report',
+  report_deleted: 'deleted a report',
+  report_image_added: 'added a photo to a report',
+  report_image_removed: 'removed a photo from a report',
+  change_suggestion_submitted: 'suggested a change',
+  change_suggestion_reviewed: 'reviewed a suggested change',
+  timeline_event_posted: 'posted a progress update',
+  timeline_event_edited: 'edited a progress update',
+  timeline_event_deleted: 'deleted a progress update',
+  user_banned: 'banned an account',
+  user_unbanned: 'unbanned an account',
+  role_changed: "changed an account's role",
+  display_name_changed_by_moderator: "changed an account's display name",
+  moderator_request_approved: 'approved a moderator request',
+  moderator_request_denied: 'denied a moderator request',
+  moderator_access_requested: 'requested moderator access',
+};
+
 function daysPending(submittedAt) {
   return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 86400000);
 }
@@ -77,6 +98,8 @@ export default function ModeratePage() {
   const [newEventText, setNewEventText] = useState({});
   const [subscriberLists, setSubscriberLists] = useState({});
 
+  const [activityLog, setActivityLog] = useState([]);
+
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -91,10 +114,16 @@ export default function ModeratePage() {
       loadChangeSuggestions();
       loadTimelineEvents();
       loadUsers();
+      loadActivityLog();
     }
     if (data && roleLevel(data.role) >= 3) {
       loadRequests();
     }
+  }
+
+  async function loadActivityLog() {
+    const { data } = await supabase.rpc('get_activity_log');
+    setActivityLog(data || []);
   }
 
   async function loadReports() {
@@ -129,6 +158,7 @@ export default function ModeratePage() {
     const { error } = await supabase.from('change_suggestions').update({ status: 'reviewed' }).eq('id', id);
     if (error) setMessage(error.message);
     loadChangeSuggestions();
+    loadActivityLog();
   }
 
   async function loadTimelineEvents() {
@@ -148,6 +178,7 @@ export default function ModeratePage() {
     if (error) setMessage(error.message);
     setNewEventText((prev) => ({ ...prev, [suggestionId]: '' }));
     loadTimelineEvents();
+    loadActivityLog();
   }
 
   function startEventEdit(ev) {
@@ -164,6 +195,7 @@ export default function ModeratePage() {
     if (error) setMessage(error.message);
     cancelEventEdit(id);
     loadTimelineEvents();
+    loadActivityLog();
   }
   async function deleteTimelineEvent(id) {
     if (!window.confirm('Delete this timeline event?')) return;
@@ -171,6 +203,7 @@ export default function ModeratePage() {
     const { error } = await supabase.from('updates').delete().eq('id', id);
     if (error) setMessage(error.message);
     loadTimelineEvents();
+    loadActivityLog();
   }
 
   async function loadUsers() {
@@ -192,6 +225,7 @@ export default function ModeratePage() {
     if (error) setMessage(error.message);
     loadRequests();
     loadUsers();
+    loadActivityLog();
   }
 
   async function setUserRole(id, role) {
@@ -203,6 +237,7 @@ export default function ModeratePage() {
     }
     loadUsers();
     loadRequests();
+    loadActivityLog();
   }
 
   async function toggleBan(id, banned) {
@@ -211,6 +246,7 @@ export default function ModeratePage() {
     const { error } = await supabase.rpc('moderator_set_banned', { target_id: id, new_banned: banned });
     if (error) setMessage(error.message);
     loadUsers();
+    loadActivityLog();
   }
 
   function startNameEdit(u) {
@@ -231,6 +267,7 @@ export default function ModeratePage() {
     }
     cancelNameEdit(id);
     loadUsers();
+    loadActivityLog();
   }
 
   function startEdit(s) {
@@ -272,6 +309,7 @@ export default function ModeratePage() {
     if (error) setMessage(error.message);
     cancelEdit(id);
     loadReports();
+    loadActivityLog();
   }
 
   async function deleteReport(id) {
@@ -280,6 +318,7 @@ export default function ModeratePage() {
     const { error } = await supabase.from('suggestions').delete().eq('id', id);
     if (error) setMessage(error.message);
     loadReports();
+    loadActivityLog();
   }
 
   async function addImage(suggestionId, file) {
@@ -292,6 +331,7 @@ export default function ModeratePage() {
       setMessage(uploadError.message);
     }
     loadReports();
+    loadActivityLog();
   }
 
   async function removeImage(imageId) {
@@ -300,6 +340,7 @@ export default function ModeratePage() {
     const { error } = await supabase.from('report_images').delete().eq('id', imageId);
     if (error) setMessage(error.message);
     loadReports();
+    loadActivityLog();
   }
 
   async function addSuggestedImageToReport(cs, url) {
@@ -319,6 +360,7 @@ export default function ModeratePage() {
     if (updateError) setMessage(updateError.message);
     loadReports();
     loadChangeSuggestions();
+    loadActivityLog();
   }
 
   async function requestModerator() {
@@ -424,6 +466,12 @@ export default function ModeratePage() {
               onClick={() => setSection('users')}
             >
               User accounts
+            </button>
+            <button
+              className={`filter-btn ${section === 'activity' ? 'active' : ''}`}
+              onClick={() => setSection('activity')}
+            >
+              Activity
             </button>
           </div>
         )}
@@ -556,6 +604,33 @@ export default function ModeratePage() {
                 </div>
               );
             })}
+          </>
+        )}
+
+        {isModOrAdmin && section === 'activity' && (
+          <>
+            <p className="hint" style={{ margin: '4px 0 10px' }}>
+              Every suggestion and moderation action, most recent first.
+            </p>
+            {activityLog.length === 0 && <div className="empty">No activity yet.</div>}
+            {activityLog.map((entry) => (
+              <div className="card" key={entry.id}>
+                <div className="meta">{new Date(entry.created_at).toLocaleString()}</div>
+                <p style={{ margin: 0 }}>
+                  <strong>{entry.actor_display_name || entry.actor_email || 'Someone'}</strong>{' '}
+                  {ACTIVITY_LABELS[entry.action] || entry.action}
+                  {entry.detail?.title && <> — &quot;{entry.detail.title}&quot;</>}
+                  {entry.detail?.from && entry.detail?.to && (
+                    <> ({entry.detail.from} → {entry.detail.to})</>
+                  )}
+                </p>
+                {entry.target_type === 'suggestion' && entry.target_id && (
+                  <a className="btn outline" style={{ marginTop: 8 }} href={`/report/${entry.target_id}`}>
+                    View report
+                  </a>
+                )}
+              </div>
+            ))}
           </>
         )}
 
