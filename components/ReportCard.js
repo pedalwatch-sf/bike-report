@@ -12,7 +12,10 @@ export default function ReportCard({ report: s, following, onFollowingChange, up
         <span className="badge cat">{s.category}</span>
         <h3>{s.title}</h3>
         <p>{s.description}</p>
-        <div className="meta">Reported {new Date(s.submitted_at).toLocaleDateString()}</div>
+        <div className="meta">
+          Reported {new Date(s.submitted_at).toLocaleDateString()}
+          {s.reporter_display_name !== undefined && ` · by ${s.reporter_display_name || 'Community member'}`}
+        </div>
       </Link>
       <InterestButton
         suggestionId={s.id}

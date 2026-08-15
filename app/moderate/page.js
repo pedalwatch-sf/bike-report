@@ -13,6 +13,7 @@ import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
 import { dotIcon } from '../../lib/leafletDotIcon';
 import { CATEGORIES } from '../../lib/categories';
+import { attachReporterNames } from '../../lib/reporterNames';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
@@ -90,7 +91,7 @@ export default function ModeratePage() {
       .from('suggestions')
       .select('*, report_images(id, url), subscribers(count)')
       .order('submitted_at', { ascending: false });
-    setReports(data || []);
+    setReports(await attachReporterNames(data || []));
   }
 
   async function toggleSubscribers(id) {
@@ -655,6 +656,8 @@ export default function ModeratePage() {
 
                   <div className="meta">
                     {s.lat?.toFixed(4)}, {s.lng?.toFixed(4)} · {new Date(s.submitted_at).toLocaleString()}
+                    {' · reported by '}
+                    {s.reporter_display_name || 'Community member'}
                   </div>
 
                   {!edit && s.status === 'pending' && (
