@@ -83,12 +83,12 @@ reports, suggest changes, or register interest.
 ## What's on each page
 
 - **Browse** (`/`) -- map centered on SF with a colored dot per report
-  (teal for active, yellow for resolved -- matching those status
+  (blue for active, yellow for resolved -- matching those status
   badges' colors elsewhere), a search box, and Active / Resolved pill
   tabs. Each report card shows its photo, category, interest count,
   and an "I'm interested" toggle.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
-  map. The map also shows every existing approved report as a teal dot
+  map. The map also shows every existing approved report as a blue dot
   for context, alongside your own pin in yellow once you place one.
   Warns you before submitting if there's already an approved report
   within ~125m, in case it's a duplicate; you can still submit anyway.

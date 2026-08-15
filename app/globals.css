@@ -5,7 +5,7 @@
   --chalk: #f4f7f5;
   --chalk-dim: #dce4e2;
   --yellow: #f3af49;
-  --teal: #4fb3a9;
+  --teal: #5982c0;
   --coral: #e85d4c;
   --line: rgba(244, 247, 245, 0.08);
   --line-strong: rgba(244, 247, 245, 0.14);
@@ -212,13 +212,13 @@ h1 {
 }
 .badge.cat { background: var(--navy-soft); color: var(--teal); }
 .badge.pending { background: rgba(232, 93, 76, 0.18); color: var(--coral); }
-.badge.approved { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
+.badge.approved { background: rgba(89, 130, 192, 0.18); color: var(--teal); }
 .badge.rejected { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
 .badge.resolved { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
 .badge.withdrawn { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
 .badge.role-owner { background: var(--yellow); color: var(--ink); }
 .badge.role-admin { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
-.badge.role-moderator { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
+.badge.role-moderator { background: rgba(89, 130, 192, 0.18); color: var(--teal); }
 .badge.role-user { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
 .badge.banned { background: rgba(232, 93, 76, 0.32); color: var(--coral); }
 .filter-row {
@@ -335,7 +335,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--teal);
-  box-shadow: 0 0 0 3px rgba(79, 179, 169, 0.22);
+  box-shadow: 0 0 0 3px rgba(89, 130, 192, 0.22);
 }
 textarea { min-height: 80px; resize: vertical; }
 .hint { font-size: 12.5px; color: var(--chalk-dim); opacity: 0.8; margin-top: 4px; }
