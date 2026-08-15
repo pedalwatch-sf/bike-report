@@ -179,10 +179,12 @@ in one round trip, used on Browse and Moderate) · `get_timeline_updates`, `get_
 (progress timeline, with author email masked for non-moderators) ·
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
 `unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`,
-`mark_subscription_seen` (the interest-follow feature, plus the
-in-app "updated" indicator -- `subscriber_identities.last_seen_status`
-tracks the status each follower last saw per report, cleared one report
-at a time as you actually open it, not all at once) ·
+`mark_subscription_seen` (the interest-follow feature, plus the in-app
+"updated" indicator -- `subscriber_identities.last_seen_status` and
+`last_seen_at` track the status and time each follower last checked a
+report, cleared one report at a time as you actually open it rather
+than all at once; a report counts as updated if its status changed or
+a new timeline entry was posted since) ·
 `handle_new_user` (creates a profile row on signup) · `get_public_stats`
 (aggregate-only counts for `/impact`; intentionally has no
 authorization check since it never returns row content).
