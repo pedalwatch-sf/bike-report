@@ -138,6 +138,25 @@ h1 {
 .badge.cat { background: var(--navy-soft); color: var(--teal); }
 .badge.pending { background: rgba(232, 93, 76, 0.18); color: var(--coral); }
 .badge.approved { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
+.badge.rejected { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
+.badge.role-admin { background: rgba(255, 200, 71, 0.18); color: var(--yellow); }
+.badge.role-moderator { background: rgba(79, 179, 169, 0.18); color: var(--teal); }
+.badge.role-user { background: rgba(244, 247, 245, 0.1); color: var(--chalk-dim); }
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.filter-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--chalk-dim);
+  cursor: pointer;
+}
+.filter-btn.active { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .card h3 {
   font-family: 'Oswald', sans-serif;
   font-size: 19px;
