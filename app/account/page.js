@@ -10,6 +10,8 @@ export default function AccountPage() {
   const user = useUser();
   const [profile, setProfile] = useState(null);
   const [message, setMessage] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     if (user) loadProfile();
@@ -18,6 +20,19 @@ export default function AccountPage() {
   async function loadProfile() {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
+    setDisplayName(data?.display_name || '');
+  }
+
+  async function saveDisplayName() {
+    setSavingName(true);
+    setMessage('');
+    const { error } = await supabase.rpc('set_display_name', { new_name: displayName });
+    setSavingName(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    loadProfile();
   }
 
   async function requestModerator() {
@@ -84,9 +99,24 @@ export default function AccountPage() {
               <button className="btn outline" onClick={requestModerator}>Request moderator access</button>
             )}
 
+          <label>Display name</label>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Shown publicly on your reports instead of your email"
+            maxLength={60}
+          />
+          <div style={{ marginTop: 10 }}>
+            <button className="btn outline" onClick={saveDisplayName} disabled={savingName}>
+              {savingName ? 'Saving…' : 'Save name'}
+            </button>
+          </div>
+
           {message && <p className="hint" style={{ marginTop: 10 }}>{message}</p>}
 
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16 }} className="row">
+            <a className="btn outline" href={`/profile/${user.id}`}>View public profile</a>
             <button className="btn outline" onClick={signOut}>Sign out</button>
           </div>
         </div>
