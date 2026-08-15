@@ -12,12 +12,29 @@ import { escapeHtml } from '../lib/escapeHtml';
 import { dotIcon } from '../lib/leafletDotIcon';
 import { attachReporterNames } from '../lib/reporterNames';
 
+const VIEWS = ['active', 'resolved', 'following'];
+
+// Keeps the Active/Resolved/Following pill selection across page
+// refreshes -- read once on mount from localStorage, written back on
+// every change.
+function usePersistedView() {
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return 'active';
+    const stored = window.localStorage.getItem('browse-view');
+    return stored && VIEWS.includes(stored) ? stored : 'active';
+  });
+  useEffect(() => {
+    window.localStorage.setItem('browse-view', value);
+  }, [value]);
+  return [value, setValue];
+}
+
 export default function BrowsePage() {
   const user = useUser();
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState('active');
+  const [view, setView] = usePersistedView();
   const [myInterests, setMyInterests] = useState(new Set());
   const [followingReports, setFollowingReports] = useState(undefined);
   const [updatedIds, setUpdatedIds] = useState(new Set());

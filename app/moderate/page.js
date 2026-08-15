@@ -49,6 +49,24 @@ const ACTIVITY_LABELS = {
   moderator_access_requested: 'requested moderator access',
 };
 
+const MODERATE_SECTIONS = ['reports', 'changes', 'users', 'activity'];
+
+// Keeps a pill selection across page refreshes -- read once on mount from
+// localStorage, written back on every change. Falls back to defaultValue
+// when nothing's stored yet or a stored value no longer matches an
+// allowed option (e.g. after a filter's choices change).
+function usePersistedFilter(key, defaultValue, allowed) {
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return defaultValue;
+    const stored = window.localStorage.getItem(key);
+    return stored && allowed.includes(stored) ? stored : defaultValue;
+  });
+  useEffect(() => {
+    window.localStorage.setItem(key, value);
+  }, [key, value]);
+  return [value, setValue];
+}
+
 function daysPending(submittedAt) {
   return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 86400000);
 }
@@ -79,16 +97,16 @@ function downloadCsv(filename, csv) {
 export default function ModeratePage() {
   const user = useUser();
   const [profile, setProfile] = useState(null);
-  const [section, setSection] = useState('reports');
+  const [section, setSection] = usePersistedFilter('moderate-section', 'reports', MODERATE_SECTIONS);
 
   const [reports, setReports] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = usePersistedFilter('moderate-status-filter', 'pending', ['all', ...STATUSES]);
   const [reportSearch, setReportSearch] = useState('');
   const [editing, setEditing] = useState({});
 
   const [users, setUsers] = useState([]);
-  const [userStatusFilter, setUserStatusFilter] = useState('all');
-  const [elevationFilter, setElevationFilter] = useState('all');
+  const [userStatusFilter, setUserStatusFilter] = usePersistedFilter('moderate-user-status-filter', 'all', ACCOUNT_STATUS_FILTERS);
+  const [elevationFilter, setElevationFilter] = usePersistedFilter('moderate-elevation-filter', 'all', ELEVATION_FILTERS);
   const [requests, setRequests] = useState([]);
   const [nameDrafts, setNameDrafts] = useState({});
   const [changeSuggestions, setChangeSuggestions] = useState([]);
