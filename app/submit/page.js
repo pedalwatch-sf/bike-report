@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
@@ -17,6 +18,7 @@ const CATEGORIES = [
 
 export default function SubmitPage() {
   const user = useUser();
+  const router = useRouter();
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
@@ -56,6 +58,10 @@ export default function SubmitPage() {
   }, [user]);
 
   async function handleSubmit() {
+    if (title.trim().toLowerCase() === 'kitten') {
+      router.push('/kitten');
+      return;
+    }
     if (!title.trim() || !description.trim()) {
       setMessage('Add a title and description first.');
       return;
