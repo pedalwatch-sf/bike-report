@@ -91,7 +91,7 @@ reports, suggest changes, or register interest.
   map. The map also shows every existing approved report as a teal dot
   for context, alongside your own pin in yellow once you place one.
   Warns you before submitting if there's already an approved report
-  within ~75m, in case it's a duplicate; you can still submit anyway.
+  within ~125m, in case it's a duplicate; you can still submit anyway.
   A synchronous lock stops a double-click or slow tap from creating
   two rows. Submitting a report titled exactly "kitten" is a hidden
   shortcut -- see the easter egg section.
@@ -107,8 +107,8 @@ reports, suggest changes, or register interest.
     including the location map and photos; approve/reject/resolve/
     reopen/delete; manage the progress timeline; view the interested-email
     list for a report. Flags a pending report with a warning when
-    another pending report is within ~75m, so likely duplicate
-    submissions in the queue are easy to spot and consolidate.
+    another pending or approved report is within ~125m, so likely
+    duplicates are easy to spot and consolidate.
   - *Suggested changes* -- review user-submitted change notes and photos
     alongside the original report, pull a suggested photo onto the
     report with one click.
