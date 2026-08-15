@@ -126,7 +126,7 @@ reports, suggest changes, or register interest.
   returns aggregate counts only, so it can include pending/rejected
   reports in the total without exposing their content to anonymous
   visitors.
-- **Moderate** (`/moderate`) -- gated to moderator role and above, three
+- **Moderate** (`/moderate`) -- gated to moderator role and above, four
   tabs:
   - *Reports* -- filter by status (pending/approved/rejected/resolved/
     withdrawn) or search by title/description/category; each card shows
@@ -147,6 +147,11 @@ reports, suggest changes, or register interest.
     unban, and (admin+ only) change role via a dropdown. Two pill rows
     filter the list -- one by status (unconfirmed / banned / requested
     moderator), one by role -- both default to all and combine together.
+  - *Activity* -- a chronological audit log of every suggestion and
+    moderation action by anyone (who did what, and to which report or
+    account), newest first. See "Full audit log for staff activity" in
+    the Security model section below for what's recorded and how it's
+    locked down.
 - **Account** (`/account`) -- set your display name, request moderator
   access, links to your public profile / submissions, sign out, and
   turn two-factor authentication on or off.
@@ -201,7 +206,10 @@ than all at once; a report counts as updated if its status changed or
 a new timeline entry was posted since) ·
 `handle_new_user` (creates a profile row on signup) · `get_public_stats`
 (aggregate-only counts for `/impact`; intentionally has no
-authorization check since it never returns row content).
+authorization check since it never returns row content) ·
+`log_activity`, `get_activity_log` (the audit log behind Moderate's
+Activity tab -- see "Full audit log for staff activity" under Security
+model).
 
 ## Database schema
 
@@ -269,9 +277,23 @@ afterward, so the repo always shows what's actually running.
   check in this app is relative to role rather than a specific account)
   so normal use/testing never trips them.
   Sign-in and sign-up also render a Cloudflare Turnstile CAPTCHA widget
-  (`lib/constants.js` -> `TURNSTILE_SITE_KEY`), though it's currently
-  wired to Cloudflare's public test key and does nothing server-side
-  until the two manual steps in "CAPTCHA setup" below are done.
+  (`lib/constants.js` -> `TURNSTILE_SITE_KEY`), wired to a real sitekey
+  registered to the production domain. It only starts blocking anything
+  once the matching secret key is entered in Supabase's dashboard (see
+  "CAPTCHA setup" below) -- that step hasn't been independently verified.
+- **Full audit log for staff activity.** Every suggestion submission,
+  status change, edit, deletion, photo add/remove, change-suggestion
+  review, timeline post, and account-management action (ban/unban, role
+  change, display name change, moderator request decision) is recorded
+  in `private.activity_log` -- a table with zero PostgREST grants, so
+  it's reachable only through `get_activity_log()`, which is
+  moderator-and-above only and resolves the actor's email/display name
+  regardless of the caller's normal profile-visibility limits. Table
+  writes go through triggers (for direct-table-write actions like
+  suggestions and timeline posts) or an inline call from the relevant
+  `SECURITY DEFINER` function (for account-management RPCs). Only
+  activity from when this feature shipped onward is recorded -- there's
+  no backfill of prior history.
 
 ## Running it locally
 
@@ -319,20 +341,22 @@ other admins.
 
 ### 3. CAPTCHA setup
 
-Sign-in and sign-up already render a Turnstile widget, but it's pointed
-at Cloudflare's public test key and Supabase isn't yet requiring the
-token, so it's not doing anything protective until both of these are done:
+Sign-in and sign-up already render a Turnstile widget pointed at a real
+sitekey registered to `bike-report-omega.vercel.app` (steps 1 and 2
+below are done), but it's not confirmed that Supabase is actually
+requiring the token yet (step 3) -- until that's verified, treat CAPTCHA
+as not yet protective:
 
-1. Create a site at [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile),
-   registering `bike-report-omega.vercel.app` as its hostname (add
-   `localhost` too if you want the widget to work in local dev) --
-   Turnstile only validates for hostnames a site is registered under,
-   so if the app's domain ever changes, update it here too, not just
-   in Supabase's Site URL (see step 1 above)
-2. Copy the **Sitekey** and replace `TURNSTILE_SITE_KEY` in
-   `lib/constants.js` with it -- this is the public half, safe to
-   commit, it's what tells the browser which Turnstile site to render
-3. Copy the **Secret key** and paste it into Supabase dashboard ->
+1. Done: created a site at [Cloudflare Turnstile](https://dash.cloudflare.com/?to=/:account/turnstile),
+   registered to `bike-report-omega.vercel.app` (add `localhost` too if
+   you want the widget to work in local dev) -- Turnstile only validates
+   for hostnames a site is registered under, so if the app's domain ever
+   changes, update it here too, not just in Supabase's Site URL (see
+   step 1 in the section above)
+2. Done: copied the **Sitekey** into `TURNSTILE_SITE_KEY` in
+   `lib/constants.js` -- this is the public half, safe to commit, it's
+   what tells the browser which Turnstile site to render
+3. Not yet confirmed: copy the **Secret key** and paste it into Supabase dashboard ->
    Authentication -> Bot and Abuse Protection -> enable CAPTCHA
    protection, select Turnstile -- this is the private half, it's what
    lets Supabase's server verify a token is real; it never goes in the
