@@ -20,6 +20,7 @@ export default function Nav() {
     <nav className="tabs">
       {tab('/', 'Browse')}
       {tab('/submit', 'Submit')}
+      {tab('/impact', 'Impact')}
       {canModerate && tab('/moderate', 'Moderate')}
       {tab('/account', user ? 'Account' : 'Sign in')}
     </nav>

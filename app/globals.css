@@ -248,6 +248,41 @@ h1 {
   letter-spacing: -0.01em;
 }
 .card p { margin: 0 0 10px; font-size: 14px; color: var(--chalk-dim); line-height: 1.55; }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.stat-tile {
+  background: var(--navy);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.stat-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.stat-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  display: flex;
+  align-items: center;
+  margin: 0 0 8px;
+}
+.stat-value {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 32px;
+  margin: 0;
+}
 .meta {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;

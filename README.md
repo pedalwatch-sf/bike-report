@@ -107,6 +107,11 @@ reports, suggest changes, or register interest.
   with next/prev), location, progress timeline, who reported it (links
   to their profile), an interest-follow toggle, and a "suggest a change"
   box for signed-in users on active reports.
+- **Impact** (`/impact`) -- public stat tiles (reports submitted, in
+  review, active, resolved) pulled from a `get_public_stats()` RPC that
+  returns aggregate counts only, so it can include pending/rejected
+  reports in the total without exposing their content to anonymous
+  visitors.
 - **Moderate** (`/moderate`) -- gated to moderator role and above, three
   tabs:
   - *Reports* -- filter by status (pending/approved/rejected/resolved/
@@ -115,7 +120,10 @@ reports, suggest changes, or register interest.
     reopen/delete; manage the progress timeline; view the interested-email
     list for a report. Flags a pending report with a warning when
     another pending or approved report is within ~125m, so likely
-    duplicates are easy to spot and consolidate.
+    duplicates are easy to spot and consolidate. Pending reports also
+    show how many days they've been waiting, flagged in coral past a
+    week. An "Export to CSV" button downloads the currently filtered
+    list.
   - *Suggested changes* -- review user-submitted change notes and photos
     alongside the original report, pull a suggested photo onto the
     report with one click.
@@ -167,7 +175,9 @@ public profile) · `get_timeline_updates`, `get_all_timeline_updates_for_moderat
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
 `unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`
 (the interest-follow feature) · `handle_new_user` (creates a profile row
-on signup).
+on signup) · `get_public_stats` (aggregate-only counts for `/impact`;
+intentionally has no authorization check since it never returns row
+content).
 
 ## Database schema
 
