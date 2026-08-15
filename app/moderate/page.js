@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Header from '../../components/Header';
 import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
+import { uploadImage } from '../../lib/uploadImage';
 
-const STATUSES = ['pending', 'approved', 'rejected'];
+const STATUSES = ['pending', 'approved', 'rejected', 'resolved'];
 const ROLES = ['user', 'moderator', 'admin'];
+const SF_CENTER = [37.7749, -122.4194];
 
 export default function ModeratePage() {
   const user = useUser();
@@ -44,7 +46,7 @@ export default function ModeratePage() {
   async function loadReports() {
     const { data } = await supabase
       .from('suggestions')
-      .select('*')
+      .select('*, report_images(id, url)')
       .order('submitted_at', { ascending: false });
     setReports(data || []);
   }
@@ -110,7 +112,6 @@ export default function ModeratePage() {
         status: s.status,
         lat: s.lat ?? '',
         lng: s.lng ?? '',
-        image_url: s.image_url || '',
       },
     }));
   }
@@ -127,13 +128,13 @@ export default function ModeratePage() {
     if (action === 'approve') update = { status: 'approved' };
     else if (action === 'reject') update = { status: 'rejected' };
     else if (action === 'reopen') update = { status: 'pending' };
+    else if (action === 'resolve') update = { status: 'resolved' };
     else if (action === 'edit') {
       const edit = editing[id];
       update = {
         ...edit,
         lat: edit.lat === '' ? null : Number(edit.lat),
         lng: edit.lng === '' ? null : Number(edit.lng),
-        image_url: edit.image_url.trim() || null,
       };
     }
     const { error } = await supabase.from('suggestions').update(update).eq('id', id);
@@ -146,6 +147,26 @@ export default function ModeratePage() {
     if (!window.confirm('Delete this report permanently? This cannot be undone.')) return;
     setMessage('');
     const { error } = await supabase.from('suggestions').delete().eq('id', id);
+    if (error) setMessage(error.message);
+    loadReports();
+  }
+
+  async function addImage(suggestionId, file) {
+    setMessage('');
+    try {
+      const url = await uploadImage(file);
+      const { error } = await supabase.from('report_images').insert({ suggestion_id: suggestionId, url });
+      if (error) setMessage(error.message);
+    } catch (uploadError) {
+      setMessage(uploadError.message);
+    }
+    loadReports();
+  }
+
+  async function removeImage(imageId) {
+    if (!window.confirm('Remove this image?')) return;
+    setMessage('');
+    const { error } = await supabase.from('report_images').delete().eq('id', imageId);
     if (error) setMessage(error.message);
     loadReports();
   }
@@ -187,6 +208,10 @@ export default function ModeratePage() {
   const isModOrAdmin = profile && (profile.role === 'moderator' || profile.role === 'admin');
   const isAdmin = profile?.role === 'admin';
   const visibleReports = statusFilter === 'all' ? reports : reports.filter((r) => r.status === statusFilter);
+  const changesByReport = {};
+  changeSuggestions.forEach((cs) => {
+    (changesByReport[cs.suggestion_id] ||= []).push(cs);
+  });
 
   return (
     <main>
@@ -241,17 +266,7 @@ export default function ModeratePage() {
             </p>
             {changeSuggestions.length === 0 && <div className="empty">No pending suggestions.</div>}
             {changeSuggestions.map((cs) => (
-              <div className="card" key={cs.id}>
-                <span className="badge cat">{cs.suggestions?.title || 'Report'}</span>
-                <p>{cs.message}</p>
-                <div className="meta">
-                  {cs.submitter_email} · {new Date(cs.created_at).toLocaleString()}
-                </div>
-                <div className="row">
-                  <a className="btn outline" href={`/report/${cs.suggestion_id}`}>View report</a>
-                  <button className="btn teal" onClick={() => markChangeReviewed(cs.id)}>Mark reviewed</button>
-                </div>
-              </div>
+              <ChangeSuggestionCard key={cs.id} cs={cs} onReview={markChangeReviewed} />
             ))}
           </>
         )}
@@ -322,7 +337,9 @@ export default function ModeratePage() {
               const edit = editing[s.id];
               return (
                 <div className="card" key={s.id}>
-                  {!edit && s.image_url && <img src={s.image_url} alt="" className="card-image" />}
+                  {!edit && s.report_images?.map((img) => (
+                    <img key={img.id} src={img.url} alt="" className="card-image" />
+                  ))}
                   <span className={`badge ${s.status}`}>{s.status}</span>
                   <span className="badge cat">{s.category}</span>
 
@@ -330,7 +347,7 @@ export default function ModeratePage() {
                     <>
                       <label>Title</label>
                       <input type="text" value={edit.title} onChange={(e) => updateField(s.id, 'title', e.target.value)} />
-                      <label>Description</label>
+                      <label>Details</label>
                       <textarea value={edit.description} onChange={(e) => updateField(s.id, 'description', e.target.value)} />
                       <label>Category</label>
                       <input type="text" value={edit.category} onChange={(e) => updateField(s.id, 'category', e.target.value)} />
@@ -340,6 +357,15 @@ export default function ModeratePage() {
                           <option key={st} value={st}>{st}</option>
                         ))}
                       </select>
+                      <label>Location</label>
+                      <LocationMap
+                        lat={edit.lat}
+                        lng={edit.lng}
+                        onChange={(lat, lng) => {
+                          updateField(s.id, 'lat', lat);
+                          updateField(s.id, 'lng', lng);
+                        }}
+                      />
                       <div className="field-grid">
                         <div>
                           <label>Latitude</label>
@@ -350,8 +376,25 @@ export default function ModeratePage() {
                           <input type="number" step="any" value={edit.lng} onChange={(e) => updateField(s.id, 'lng', e.target.value)} />
                         </div>
                       </div>
-                      <label>Image URL</label>
-                      <input type="text" value={edit.image_url} onChange={(e) => updateField(s.id, 'image_url', e.target.value)} placeholder="https://…" />
+
+                      <label>Images</label>
+                      <div className="row" style={{ marginBottom: 8 }}>
+                        {s.report_images?.map((img) => (
+                          <div className="thumb" key={img.id}>
+                            <img src={img.url} alt="" />
+                            <button className="thumb-remove" onClick={() => removeImage(img.id)}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) addImage(s.id, file);
+                          e.target.value = '';
+                        }}
+                      />
                     </>
                   ) : (
                     <>
@@ -378,6 +421,9 @@ export default function ModeratePage() {
                     {!edit && s.status !== 'rejected' && (
                       <button className="btn coral" onClick={() => act(s.id, 'reject')}>Reject</button>
                     )}
+                    {!edit && s.status !== 'resolved' && (
+                      <button className="btn teal" onClick={() => act(s.id, 'resolve')}>Mark resolved</button>
+                    )}
                     {!edit && s.status !== 'pending' && (
                       <button className="btn outline" onClick={() => act(s.id, 'reopen')}>Reopen</button>
                     )}
@@ -385,6 +431,15 @@ export default function ModeratePage() {
                       <button className="btn coral" onClick={() => deleteReport(s.id)}>Delete</button>
                     )}
                   </div>
+
+                  {changesByReport[s.id]?.length > 0 && (
+                    <div style={{ marginTop: 14, borderTop: '1px dashed var(--line)', paddingTop: 12 }}>
+                      <p className="hint" style={{ margin: '0 0 8px' }}>Suggested changes for this report</p>
+                      {changesByReport[s.id].map((cs) => (
+                        <ChangeSuggestionCard key={cs.id} cs={cs} onReview={markChangeReviewed} compact />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -395,4 +450,72 @@ export default function ModeratePage() {
       </div>
     </main>
   );
+}
+
+function ChangeSuggestionCard({ cs, onReview, compact }) {
+  return (
+    <div className="card" style={compact ? { background: 'var(--navy-soft)' } : undefined}>
+      {!compact && <span className="badge cat">{cs.suggestions?.title || 'Report'}</span>}
+      <p style={{ margin: compact ? '0 0 8px' : undefined }}>{cs.message}</p>
+      {cs.image_urls?.length > 0 && (
+        <div className="row" style={{ marginBottom: 8 }}>
+          {cs.image_urls.map((url) => (
+            <div className="thumb" key={url}>
+              <img src={url} alt="" />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="meta">
+        {cs.submitter_email} · {new Date(cs.created_at).toLocaleString()}
+      </div>
+      <div className="row">
+        {!compact && <a className="btn outline" href={`/report/${cs.suggestion_id}`}>View report</a>}
+        <button className="btn teal" onClick={() => onReview(cs.id)}>Mark reviewed</button>
+      </div>
+    </div>
+  );
+}
+
+function LocationMap({ lat, lng, onChange }) {
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const L = (await import('leaflet')).default;
+      if (cancelled) return;
+      const start = [
+        lat !== '' && lat != null ? Number(lat) : SF_CENTER[0],
+        lng !== '' && lng != null ? Number(lng) : SF_CENTER[1],
+      ];
+      const map = L.map(mapRef.current, { scrollWheelZoom: false }).setView(start, 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+      const marker = L.marker(start).addTo(map);
+      map.on('click', (e) => {
+        marker.setLatLng(e.latlng);
+        onChange(e.latlng.lat, e.latlng.lng);
+      });
+      mapInstance.current = map;
+      markerRef.current = marker;
+    })();
+    return () => {
+      cancelled = true;
+      if (mapInstance.current) mapInstance.current.remove();
+    };
+    // Mount once per edit session; re-syncing on every keystroke happens below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (markerRef.current && lat !== '' && lng !== '' && !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng))) {
+      markerRef.current.setLatLng([Number(lat), Number(lng)]);
+    }
+  }, [lat, lng]);
+
+  return <div ref={mapRef} className="edit-map" />;
 }

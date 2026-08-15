@@ -7,6 +7,9 @@ import Nav from '../../../components/Nav';
 import InterestButton from '../../../components/InterestButton';
 import { supabase } from '../../../lib/supabaseClient';
 import { useProfile } from '../../../lib/useProfile';
+import { uploadImage } from '../../../lib/uploadImage';
+
+const ACTIVE_STATUSES = ['approved', 'resolved'];
 
 export default function ReportDetailPage({ params }) {
   const { id } = params;
@@ -19,6 +22,7 @@ export default function ReportDetailPage({ params }) {
   const [posting, setPosting] = useState(false);
 
   const [changeMessage, setChangeMessage] = useState('');
+  const [changeImages, setChangeImages] = useState([]);
   const [suggestingChange, setSuggestingChange] = useState(false);
   const [changeSent, setChangeSent] = useState(false);
 
@@ -39,7 +43,7 @@ export default function ReportDetailPage({ params }) {
   async function loadReport() {
     const { data } = await supabase
       .from('suggestions')
-      .select('*, subscribers(count)')
+      .select('*, subscribers(count), report_images(id, url)')
       .eq('id', id)
       .single();
     setReport(data || null);
@@ -83,15 +87,26 @@ export default function ReportDetailPage({ params }) {
   async function submitChangeSuggestion() {
     if (!changeMessage.trim()) return;
     setSuggestingChange(true);
+    let image_urls = null;
+    if (changeImages.length > 0) {
+      try {
+        image_urls = await Promise.all(changeImages.map(uploadImage));
+      } catch (uploadError) {
+        setSuggestingChange(false);
+        return;
+      }
+    }
     const { error } = await supabase.from('change_suggestions').insert({
       suggestion_id: id,
       user_id: user.id,
       submitter_email: user.email,
       message: changeMessage.trim(),
+      image_urls,
     });
     setSuggestingChange(false);
     if (!error) {
       setChangeMessage('');
+      setChangeImages([]);
       setChangeSent(true);
     }
   }
@@ -133,7 +148,10 @@ export default function ReportDetailPage({ params }) {
         </button>
 
         <div className="card">
-          {report.image_url && <img src={report.image_url} alt="" className="card-image" />}
+          {report.report_images?.map((img) => (
+            <img key={img.id} src={img.url} alt="" className="card-image" />
+          ))}
+          {report.status === 'resolved' && <span className="badge resolved">Resolved</span>}
           <span className="badge cat">{report.category}</span>
           <h3>{report.title}</h3>
           <p>{report.description}</p>
@@ -170,7 +188,7 @@ export default function ReportDetailPage({ params }) {
           </div>
         )}
 
-        {user && report.status === 'approved' && (
+        {user && ACTIVE_STATUSES.includes(report.status) && (
           <div className="card">
             <label>Suggest a change</label>
             {changeSent ? (
@@ -181,6 +199,13 @@ export default function ReportDetailPage({ params }) {
                   value={changeMessage}
                   onChange={(e) => setChangeMessage(e.target.value)}
                   placeholder="e.g. This has actually been fixed, or the category should be different"
+                />
+                <label>Add photos (optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setChangeImages(Array.from(e.target.files || []))}
                 />
                 <div style={{ marginTop: 10 }}>
                   <button

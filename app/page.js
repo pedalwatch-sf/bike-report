@@ -7,6 +7,8 @@ import Nav from '../components/Nav';
 import InterestButton from '../components/InterestButton';
 import { supabase } from '../lib/supabaseClient';
 
+const SF_CENTER = [37.7749, -122.4194];
+
 export default function BrowsePage() {
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -25,8 +27,8 @@ export default function BrowsePage() {
   async function loadSuggestions() {
     const { data, error } = await supabase
       .from('suggestions')
-      .select('*, subscribers(count)')
-      .eq('status', 'approved')
+      .select('*, subscribers(count), report_images(url)')
+      .in('status', ['approved', 'resolved'])
       .order('submitted_at', { ascending: false });
     if (!error) setSuggestions(data || []);
     setLoaded(true);
@@ -38,7 +40,7 @@ export default function BrowsePage() {
       mapInstance.current = null;
     }
     const L = (await import('leaflet')).default;
-    const map = L.map(mapRef.current, { scrollWheelZoom: false }).setView([39, -98.5], 4);
+    const map = L.map(mapRef.current, { scrollWheelZoom: false }).setView(SF_CENTER, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
@@ -48,12 +50,10 @@ export default function BrowsePage() {
       }
     });
     mapInstance.current = map;
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 12);
-      }, () => {});
-    }
   }
+
+  const active = suggestions.filter((s) => s.status === 'approved');
+  const resolved = suggestions.filter((s) => s.status === 'resolved');
 
   return (
     <main>
@@ -61,23 +61,39 @@ export default function BrowsePage() {
       <Nav />
       <div className="content">
         <div ref={mapRef} id="map" />
-        {loaded && suggestions.length === 0 && (
-          <div className="empty">No approved reports yet.<br />Be the first to submit one.</div>
+        {loaded && active.length === 0 && (
+          <div className="empty">No active reports yet.<br />Be the first to submit one.</div>
         )}
-        {suggestions.map((s) => (
-          <div className="card" key={s.id}>
-            <Link href={`/report/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              {s.image_url && <img src={s.image_url} alt="" className="card-image" />}
-              <span className="badge cat">{s.category}</span>
-              <h3>{s.title}</h3>
-              <p>{s.description}</p>
-              <div className="meta">Reported {new Date(s.submitted_at).toLocaleDateString()}</div>
-            </Link>
-            <InterestButton suggestionId={s.id} count={s.subscribers?.[0]?.count ?? 0} />
-          </div>
+        {active.map((s) => (
+          <ReportCard key={s.id} report={s} />
         ))}
+
+        {resolved.length > 0 && (
+          <>
+            <p className="hint" style={{ margin: '18px 0 10px' }}>Resolved</p>
+            {resolved.map((s) => (
+              <ReportCard key={s.id} report={s} />
+            ))}
+          </>
+        )}
       </div>
     </main>
+  );
+}
+
+function ReportCard({ report: s }) {
+  return (
+    <div className="card">
+      <Link href={`/report/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        {s.report_images?.[0]?.url && <img src={s.report_images[0].url} alt="" className="card-image" />}
+        {s.status === 'resolved' && <span className="badge resolved">Resolved</span>}
+        <span className="badge cat">{s.category}</span>
+        <h3>{s.title}</h3>
+        <p>{s.description}</p>
+        <div className="meta">Reported {new Date(s.submitted_at).toLocaleDateString()}</div>
+      </Link>
+      <InterestButton suggestionId={s.id} count={s.subscribers?.[0]?.count ?? 0} />
+    </div>
   );
 }
 
