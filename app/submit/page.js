@@ -15,9 +15,13 @@ import { dotIcon } from '../../lib/leafletDotIcon';
 const CATEGORIES = [
   'New bike lane needed',
   'Existing lane needs repair',
+  'Bike lane issue',
   'Intersection safety',
   'Signage / markings',
+  'Poor visibility / lighting',
+  'Drainage / debris',
   'Bike parking',
+  'Bike share / dock issue',
   'Other',
 ];
 
