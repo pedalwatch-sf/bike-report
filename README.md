@@ -265,3 +265,7 @@ through Supabase Auth and RLS now. If you still have
 SUPABASE_SERVICE_ROLE_KEY or MODERATOR_PASSCODE set in Vercel from
 that version, they're no longer read by any code path; you can remove
 them from Project Settings -> Environment Variables.
+
+## License
+
+MIT -- see [LICENSE](./LICENSE).

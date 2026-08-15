@@ -1,4 +1,5 @@
 import './globals.css';
+import Footer from '../components/Footer';
 
 export const metadata = {
   title: 'Project PedalWatch',
@@ -19,7 +20,10 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Footer />
+      </body>
     </html>
   );
 }
