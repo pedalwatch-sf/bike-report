@@ -479,7 +479,10 @@ export default function ModeratePage() {
                 <button
                   key={f}
                   className={`filter-btn ${statusFilter === f ? 'active' : ''}`}
-                  onClick={() => setStatusFilter(f)}
+                  onClick={() => {
+                    if (statusFilter === f) setEditing({});
+                    else setStatusFilter(f);
+                  }}
                 >
                   {f} {f !== 'all' && `(${reports.filter((r) => r.status === f).length})`}
                 </button>
