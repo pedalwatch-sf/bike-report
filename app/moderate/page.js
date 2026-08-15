@@ -19,6 +19,15 @@ const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
 const STALE_DAYS = 7;
 
+const ACCOUNT_STATUS_FILTERS = ['all', 'unconfirmed', 'banned', 'requested moderator'];
+function matchesAccountStatus(u, filter) {
+  if (filter === 'unconfirmed') return !u.email_confirmed_at;
+  if (filter === 'banned') return u.banned;
+  if (filter === 'requested moderator') return u.moderator_status === 'pending';
+  return true;
+}
+const ELEVATION_FILTERS = ['all', 'user', 'moderator', 'admin', 'owner'];
+
 function daysPending(submittedAt) {
   return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 86400000);
 }
@@ -57,6 +66,8 @@ export default function ModeratePage() {
   const [editing, setEditing] = useState({});
 
   const [users, setUsers] = useState([]);
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [elevationFilter, setElevationFilter] = useState('all');
   const [requests, setRequests] = useState([]);
   const [nameDrafts, setNameDrafts] = useState({});
   const [changeSuggestions, setChangeSuggestions] = useState([]);
@@ -349,6 +360,9 @@ export default function ModeratePage() {
   const visibleReports = reports
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
     .filter((r) => matchesSearch(r, reportSearch));
+  const visibleUsers = users
+    .filter((u) => matchesAccountStatus(u, userStatusFilter))
+    .filter((u) => elevationFilter === 'all' || u.role === elevationFilter);
   const pendingClusters = {};
   const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
   const approvedReports = reports.filter((r) => r.status === 'approved' && r.lat != null && r.lng != null);
@@ -451,8 +465,36 @@ export default function ModeratePage() {
             <p className="hint" style={{ margin: '14px 0' }}>
               {isAdmin ? "All accounts — manage anyone below your level." : 'Accounts you can moderate.'}
             </p>
-            {users.length === 0 && <div className="empty">No accounts yet.</div>}
-            {users.map((u) => {
+
+            <div className="filter-row">
+              {ACCOUNT_STATUS_FILTERS.map((f) => (
+                <button
+                  key={f}
+                  className={`filter-btn ${userStatusFilter === f ? 'active' : ''}`}
+                  onClick={() => setUserStatusFilter(f)}
+                >
+                  {f} {f !== 'all' && `(${users.filter((u) => matchesAccountStatus(u, f)).length})`}
+                </button>
+              ))}
+            </div>
+            <div className="filter-row">
+              {ELEVATION_FILTERS.map((f) => (
+                <button
+                  key={f}
+                  className={`filter-btn ${elevationFilter === f ? 'active' : ''}`}
+                  onClick={() => setElevationFilter(f)}
+                >
+                  {f} {f !== 'all' && `(${users.filter((u) => u.role === f).length})`}
+                </button>
+              ))}
+            </div>
+
+            {visibleUsers.length === 0 && (
+              <div className="empty">
+                {users.length === 0 ? 'No accounts yet.' : 'No accounts match these filters.'}
+              </div>
+            )}
+            {visibleUsers.map((u) => {
               const canManage = roleLevel(u.role) < roleLevel(profile.role);
               const nameDraft = nameDrafts[u.id];
               return (
