@@ -21,6 +21,10 @@ body {
   color: var(--chalk);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 main { display: block; }
 .page-header {
