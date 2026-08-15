@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Header from '../../../components/Header';
 import Nav from '../../../components/Nav';
 import InterestButton from '../../../components/InterestButton';
+import ImageGallery from '../../../components/ImageGallery';
 import { supabase } from '../../../lib/supabaseClient';
 import { useProfile } from '../../../lib/useProfile';
 import { uploadImage } from '../../../lib/uploadImage';
@@ -135,9 +136,7 @@ export default function ReportDetailPage({ params }) {
         </button>
 
         <div className="card">
-          {report.report_images?.map((img) => (
-            <img key={img.id} src={img.url} alt="" className="card-image" />
-          ))}
+          <ImageGallery images={report.report_images} />
           {report.status === 'resolved' && <span className="badge resolved">Resolved</span>}
           <span className="badge cat">{report.category}</span>
           <h3>{report.title}</h3>

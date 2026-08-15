@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Header from '../../components/Header';
 import Nav from '../../components/Nav';
+import ImageGallery from '../../components/ImageGallery';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 import { uploadImage } from '../../lib/uploadImage';
@@ -494,9 +495,7 @@ export default function ModeratePage() {
               const edit = editing[s.id];
               return (
                 <div className="card" key={s.id}>
-                  {!edit && s.report_images?.map((img) => (
-                    <img key={img.id} src={img.url} alt="" className="card-image" />
-                  ))}
+                  {!edit && <ImageGallery images={s.report_images} />}
                   <span className={`badge ${s.status}`}>{s.status}</span>
                   <span className="badge cat">{s.category}</span>
 
