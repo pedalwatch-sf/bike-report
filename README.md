@@ -144,9 +144,11 @@ reports, suggest changes, or register interest.
     report with one click.
   - *User accounts* -- pending moderator-access requests (admin+ only),
     and every account you're allowed to manage: edit display name, ban/
-    unban, and (admin+ only) change role via a dropdown. Two pill rows
-    filter the list -- one by status (unconfirmed / banned / requested
-    moderator), one by role -- both default to all and combine together.
+    unban, and (admin+ only) change role via a dropdown. A search box
+    filters by email or display name; a collapsible Filters panel adds
+    status (unconfirmed / banned / requested moderator) and role
+    dropdowns on top of that, both default to all and combine with the
+    search and each other.
   - *Activity* -- a chronological audit log of every suggestion and
     moderation action by anyone (who did what, and to which report or
     account), newest first. See "Full audit log for staff activity" in
