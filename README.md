@@ -13,7 +13,8 @@ image storage, and user accounts, and deployed on Vercel.
   Submit, and the location editor in Moderate
 - **Vitest** for unit tests on the pure `lib/` helpers (`npm test`), run
   automatically on every push/PR via GitHub Actions (`.github/workflows/ci.yml`,
-  alongside `npm run build`)
+  alongside `npm run build` and `npm audit --audit-level=critical`) --
+  the `main` branch requires this check to pass before a PR can merge
 - Plain CSS in `app/globals.css` (no CSS framework), dark theme, custom
   properties for color/radius/shadow tokens. The two accent colors are
   `--yellow` (`#f3af49`) and `--teal` (`#5982c0`, a complementary blue
