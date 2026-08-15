@@ -13,10 +13,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [stage, setStage] = useState('form'); // form | mfa
+  const [stage, setStage] = useState('form'); // form | mfa | forgot
   const [mfaCode, setMfaCode] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
   const captcha = useRef();
+  const [resetCaptchaToken, setResetCaptchaToken] = useState('');
+  const resetCaptcha = useRef();
   const router = useRouter();
 
   async function handleLogin() {
@@ -79,6 +81,63 @@ export default function LoginPage() {
     router.push('/account');
   }
 
+  async function handleForgotPassword() {
+    setBusy(true);
+    setMessage('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      captchaToken: resetCaptchaToken,
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    resetCaptcha.current?.reset();
+    setResetCaptchaToken('');
+    setBusy(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setMessage('If an account exists for that email, a password reset link has been sent.');
+  }
+
+  if (stage === 'forgot') {
+    return (
+      <main>
+        <Header />
+        <Nav />
+        <div className="content">
+          <div className="lock" style={{ maxWidth: 360 }}>
+            <h3>Reset your password</h3>
+            <p className="hint">Enter your account email and we&apos;ll send you a link to set a new password.</p>
+            <label>Email</label>
+            <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
+            <div style={{ marginTop: 16 }}>
+              <Turnstile
+                ref={resetCaptcha}
+                siteKey={TURNSTILE_SITE_KEY}
+                onSuccess={(token) => setResetCaptchaToken(token)}
+                onExpire={() => setResetCaptchaToken('')}
+              />
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <button className="btn" onClick={handleForgotPassword} disabled={busy || !email.trim() || !resetCaptchaToken}>
+                {busy ? 'Sending…' : 'Send reset link'}
+              </button>
+            </div>
+            {message && <p className="hint" style={{ marginTop: 10 }}>{message}</p>}
+            <p className="hint" style={{ marginTop: 14 }}>
+              <a
+                href="#"
+                style={{ color: 'var(--teal)' }}
+                onClick={(e) => { e.preventDefault(); setStage('form'); setMessage(''); }}
+              >
+                Back to sign in
+              </a>
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (stage === 'mfa') {
     return (
       <main>
@@ -119,6 +178,15 @@ export default function LoginPage() {
           <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} />
           <label>Password</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <p className="hint" style={{ marginTop: 6 }}>
+            <a
+              href="#"
+              style={{ color: 'var(--teal)' }}
+              onClick={(e) => { e.preventDefault(); setStage('forgot'); setMessage(''); }}
+            >
+              Forgot password?
+            </a>
+          </p>
           <div style={{ marginTop: 16 }}>
             <Turnstile
               ref={captcha}
