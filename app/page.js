@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import Header from '../components/Header';
 import Nav from '../components/Nav';
 import ReportCard from '../components/ReportCard';
@@ -19,6 +18,8 @@ export default function BrowsePage() {
   const [search, setSearch] = useState('');
   const [view, setView] = useState('active');
   const [myInterests, setMyInterests] = useState(new Set());
+  const [followingReports, setFollowingReports] = useState(undefined);
+  const [updatedIds, setUpdatedIds] = useState(new Set());
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
@@ -34,6 +35,38 @@ export default function BrowsePage() {
   async function loadMyInterests() {
     const { data } = await supabase.rpc('get_my_subscriptions');
     setMyInterests(new Set((data || []).map((r) => r.suggestion_id)));
+  }
+
+  useEffect(() => {
+    if (view !== 'following' || user === undefined) return;
+    if (user) loadFollowingReports();
+    else setFollowingReports([]);
+  }, [view, user]);
+
+  async function loadFollowingReports() {
+    const { data: subs } = await supabase.rpc('get_my_subscriptions');
+    const ids = (subs || []).map((s) => s.suggestion_id);
+    if (ids.length === 0) {
+      setFollowingReports([]);
+      setUpdatedIds(new Set());
+      return;
+    }
+    const { data } = await supabase
+      .from('suggestions')
+      .select('*, subscribers(count), report_images(url)')
+      .in('id', ids);
+    const bySubscribedOrder = ids
+      .map((id) => (data || []).find((r) => r.id === id))
+      .filter(Boolean);
+    setFollowingReports(bySubscribedOrder);
+    setUpdatedIds(
+      new Set(
+        (subs || [])
+          .filter((s) => s.last_seen_status && s.last_seen_status !== bySubscribedOrder.find((r) => r.id === s.suggestion_id)?.status)
+          .map((s) => s.suggestion_id)
+      )
+    );
+    supabase.rpc('mark_subscriptions_seen');
   }
 
   useEffect(() => {
@@ -100,23 +133,59 @@ export default function BrowsePage() {
           <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} onClick={() => setView('resolved')}>
             Resolved ({resolved.length})
           </button>
-          <Link href="/my-interests" className="filter-btn" style={{ textDecoration: 'none' }}>
-            Following
-          </Link>
+          <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} onClick={() => setView('following')}>
+            Following{Array.isArray(followingReports) ? ` (${followingReports.length})` : ''}
+          </button>
         </div>
 
-        {loaded && visible.length === 0 && (
-          <div className="empty">
-            {search.trim()
-              ? 'No reports match your search.'
-              : view === 'active'
-              ? <>No active reports yet.<br />Be the first to submit one.</>
-              : 'No resolved reports yet.'}
-          </div>
+        {view === 'following' ? (
+          <>
+            {(user === undefined || followingReports === undefined) && <p className="hint">Loading…</p>}
+            {user === null && (
+              <div className="lock">
+                <h3>Not signed in</h3>
+                <p className="hint">Sign in to see the reports you&apos;re following.</p>
+                <div className="row" style={{ justifyContent: 'center', marginTop: 14 }}>
+                  <a className="btn" href="/login">Sign in</a>
+                  <a className="btn outline" href="/signup">Create account</a>
+                </div>
+              </div>
+            )}
+            {user && Array.isArray(followingReports) && followingReports.length === 0 && (
+              <div className="empty">
+                You&apos;re not following any reports yet.<br />
+                Tap &quot;I&apos;m interested&quot; on a report to get updates here.
+              </div>
+            )}
+            {user &&
+              (followingReports || []).map((r) => (
+                <ReportCard
+                  key={r.id}
+                  report={r}
+                  following
+                  updated={updatedIds.has(r.id)}
+                  onFollowingChange={(nowFollowing) => {
+                    if (!nowFollowing) setFollowingReports((prev) => prev.filter((x) => x.id !== r.id));
+                  }}
+                />
+              ))}
+          </>
+        ) : (
+          <>
+            {loaded && visible.length === 0 && (
+              <div className="empty">
+                {search.trim()
+                  ? 'No reports match your search.'
+                  : view === 'active'
+                  ? <>No active reports yet.<br />Be the first to submit one.</>
+                  : 'No resolved reports yet.'}
+              </div>
+            )}
+            {visible.map((s) => (
+              <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
+            ))}
+          </>
         )}
-        {visible.map((s) => (
-          <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
-        ))}
       </div>
     </main>
   );
