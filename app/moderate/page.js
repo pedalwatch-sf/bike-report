@@ -12,6 +12,7 @@ import { roleLevel } from '../../lib/roles';
 import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
 import { dotIcon } from '../../lib/leafletDotIcon';
+import { CATEGORIES } from '../../lib/categories';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
@@ -541,7 +542,14 @@ export default function ModeratePage() {
                       <label>Details</label>
                       <textarea value={edit.description} onChange={(e) => updateField(s.id, 'description', e.target.value)} />
                       <label>Category</label>
-                      <input type="text" value={edit.category} onChange={(e) => updateField(s.id, 'category', e.target.value)} />
+                      <select value={edit.category} onChange={(e) => updateField(s.id, 'category', e.target.value)}>
+                        {!CATEGORIES.includes(edit.category) && edit.category && (
+                          <option value={edit.category}>{edit.category}</option>
+                        )}
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
                       <label>Status</label>
                       <select value={edit.status} onChange={(e) => updateField(s.id, 'status', e.target.value)}>
                         {STATUSES.map((st) => (
