@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 
@@ -130,8 +128,6 @@ export default function AccountPage() {
   if (user === undefined) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content"><p className="hint">Loading…</p></div>
       </main>
     );
@@ -140,8 +136,6 @@ export default function AccountPage() {
   if (!user) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock">
             <h3>Not signed in</h3>
@@ -158,8 +152,6 @@ export default function AccountPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <div className="card">
           <h3>{user.email}</h3>

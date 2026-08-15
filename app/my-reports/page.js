@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import ImageGallery from '../../components/ImageGallery';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
@@ -39,8 +37,6 @@ export default function MyReportsPage() {
   if (user === undefined || (user && reports === undefined)) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content"><p className="hint">Loading…</p></div>
       </main>
     );
@@ -49,8 +45,6 @@ export default function MyReportsPage() {
   if (!user) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock">
             <h3>Not signed in</h3>
@@ -67,8 +61,6 @@ export default function MyReportsPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <p className="eyebrow">My submissions</p>
         {message && <p className="hint">{message}</p>}

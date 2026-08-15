@@ -2,8 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { TURNSTILE_SITE_KEY } from '../../lib/constants';
 
@@ -43,8 +41,6 @@ export default function SignupPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <div className="lock" style={{ maxWidth: 360 }}>
           <h3>Create account</h3>

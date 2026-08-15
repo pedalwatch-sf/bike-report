@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header from '../../../components/Header';
-import Nav from '../../../components/Nav';
 import ReportCard from '../../../components/ReportCard';
 import { supabase } from '../../../lib/supabaseClient';
 import { useUser } from '../../../lib/useUser';
@@ -76,8 +74,6 @@ export default function ProfilePage({ params }) {
   if (profile === undefined) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content"><p className="hint">Loading…</p></div>
       </main>
     );
@@ -86,8 +82,6 @@ export default function ProfilePage({ params }) {
   if (profile === null) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="empty">Profile not found.</div>
         </div>
@@ -97,8 +91,6 @@ export default function ProfilePage({ params }) {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <div className="card">
           <h3>{profile.display_name || 'Community member'}</h3>

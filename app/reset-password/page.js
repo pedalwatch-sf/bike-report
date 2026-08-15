@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 
 // Landed on from the password reset link Supabase emails after
@@ -48,8 +46,6 @@ export default function ResetPasswordPage() {
   if (done) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock" style={{ maxWidth: 360 }}>
             <h3>Password updated</h3>
@@ -65,8 +61,6 @@ export default function ResetPasswordPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <div className="lock" style={{ maxWidth: 360 }}>
           <h3>Set a new password</h3>

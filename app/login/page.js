@@ -3,8 +3,6 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Turnstile } from '@marsidev/react-turnstile';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { TURNSTILE_SITE_KEY } from '../../lib/constants';
 
@@ -101,8 +99,6 @@ export default function LoginPage() {
   if (stage === 'forgot') {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock" style={{ maxWidth: 360 }}>
             <h3>Reset your password</h3>
@@ -141,8 +137,6 @@ export default function LoginPage() {
   if (stage === 'mfa') {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock" style={{ maxWidth: 360 }}>
             <h3>Enter your code</h3>
@@ -169,8 +163,6 @@ export default function LoginPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <div className="lock" style={{ maxWidth: 360 }}>
           <h3>Sign in</h3>
