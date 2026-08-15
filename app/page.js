@@ -58,7 +58,7 @@ export default function BrowsePage() {
 
   return (
     <main>
-      <Header subtitle="Flag a bike lane or crossing that needs work. Approved reports go public — add your name to the list and we'll track who's watching each one." />
+      <Header />
       <Nav />
       <div className="content">
         <div ref={mapRef} id="map" />
