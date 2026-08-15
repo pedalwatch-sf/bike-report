@@ -28,6 +28,11 @@ function matchesAccountStatus(u, filter) {
   return true;
 }
 const ELEVATION_FILTERS = ['all', 'user', 'moderator', 'admin', 'owner'];
+function matchesUserSearch(u, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return u.email?.toLowerCase().includes(q) || u.display_name?.toLowerCase().includes(q);
+}
 
 const MODERATE_SECTIONS = ['reports', 'changes', 'users', 'activity'];
 
@@ -85,8 +90,10 @@ export default function ModeratePage() {
   const [editing, setEditing] = useState({});
 
   const [users, setUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = usePersistedFilter('moderate-user-status-filter', 'all', ACCOUNT_STATUS_FILTERS);
   const [elevationFilter, setElevationFilter] = usePersistedFilter('moderate-elevation-filter', 'all', ELEVATION_FILTERS);
+  const [userFiltersOpen, setUserFiltersOpen] = useState(() => userStatusFilter !== 'all' || elevationFilter !== 'all');
   const [requests, setRequests] = useState([]);
   const [nameDrafts, setNameDrafts] = useState({});
   const [changeSuggestions, setChangeSuggestions] = useState([]);
@@ -401,8 +408,10 @@ export default function ModeratePage() {
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
     .filter((r) => matchesSearch(r, reportSearch));
   const visibleUsers = users
+    .filter((u) => matchesUserSearch(u, userSearch))
     .filter((u) => matchesAccountStatus(u, userStatusFilter))
     .filter((u) => elevationFilter === 'all' || u.role === elevationFilter);
+  const activeUserFilterCount = (userStatusFilter !== 'all' ? 1 : 0) + (elevationFilter !== 'all' ? 1 : 0);
   const pendingClusters = {};
   const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
   const approvedReports = reports.filter((r) => r.status === 'approved' && r.lat != null && r.lng != null);
@@ -512,32 +521,54 @@ export default function ModeratePage() {
               {isAdmin ? "All accounts — manage anyone below your level." : 'Accounts you can moderate.'}
             </p>
 
-            <div className="filter-row">
-              {ACCOUNT_STATUS_FILTERS.map((f) => (
+            <input
+              type="text"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              placeholder="Search accounts by email or display name…"
+            />
+            <div className="row" style={{ margin: '10px 0' }}>
+              <button
+                type="button"
+                className={`filter-btn ${userFiltersOpen ? 'active' : ''}`}
+                onClick={() => setUserFiltersOpen((v) => !v)}
+              >
+                Filters{activeUserFilterCount > 0 && ` (${activeUserFilterCount})`}
+              </button>
+              {activeUserFilterCount > 0 && (
                 <button
-                  key={f}
-                  className={`filter-btn ${userStatusFilter === f ? 'active' : ''}`}
-                  onClick={() => setUserStatusFilter(f)}
+                  type="button"
+                  className="btn outline"
+                  onClick={() => { setUserStatusFilter('all'); setElevationFilter('all'); }}
                 >
-                  {f} {f !== 'all' && `(${users.filter((u) => matchesAccountStatus(u, f)).length})`}
+                  Clear filters
                 </button>
-              ))}
+              )}
             </div>
-            <div className="filter-row">
-              {ELEVATION_FILTERS.map((f) => (
-                <button
-                  key={f}
-                  className={`filter-btn ${elevationFilter === f ? 'active' : ''}`}
-                  onClick={() => setElevationFilter(f)}
-                >
-                  {f} {f !== 'all' && `(${users.filter((u) => u.role === f).length})`}
-                </button>
-              ))}
-            </div>
+            {userFiltersOpen && (
+              <div className="card">
+                <label>Status</label>
+                <select value={userStatusFilter} onChange={(e) => setUserStatusFilter(e.target.value)}>
+                  {ACCOUNT_STATUS_FILTERS.map((f) => (
+                    <option key={f} value={f}>
+                      {f} {f !== 'all' && `(${users.filter((u) => matchesAccountStatus(u, f)).length})`}
+                    </option>
+                  ))}
+                </select>
+                <label>Role</label>
+                <select value={elevationFilter} onChange={(e) => setElevationFilter(e.target.value)}>
+                  {ELEVATION_FILTERS.map((f) => (
+                    <option key={f} value={f}>
+                      {f} {f !== 'all' && `(${users.filter((u) => u.role === f).length})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {visibleUsers.length === 0 && (
               <div className="empty">
-                {users.length === 0 ? 'No accounts yet.' : 'No accounts match these filters.'}
+                {users.length === 0 ? 'No accounts yet.' : 'No accounts match your search/filters.'}
               </div>
             )}
             {visibleUsers.map((u) => {
