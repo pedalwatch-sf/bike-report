@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useProfile } from '../../lib/useProfile';
 import { uploadImage } from '../../lib/uploadImage';
@@ -167,8 +165,6 @@ export default function SubmitPage() {
   if (user === undefined) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content"><p className="hint">Loading…</p></div>
       </main>
     );
@@ -177,8 +173,6 @@ export default function SubmitPage() {
   if (!user) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock">
             <h3>Sign in to submit a report</h3>
@@ -196,8 +190,6 @@ export default function SubmitPage() {
   if (profile?.banned) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock">
             <h3>Submitting is disabled</h3>
@@ -210,8 +202,6 @@ export default function SubmitPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <label>What needs improvement?</label>
         <input

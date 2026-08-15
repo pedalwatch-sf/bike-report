@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import ImageGallery from '../../components/ImageGallery';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
@@ -376,8 +374,6 @@ export default function ModeratePage() {
   if (user === undefined) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content"><p className="hint">Loading…</p></div>
       </main>
     );
@@ -386,8 +382,6 @@ export default function ModeratePage() {
   if (!user) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="lock">
             <h3>Moderator access</h3>
@@ -435,8 +429,6 @@ export default function ModeratePage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         {!isModOrAdmin && (
           <div className="lock">

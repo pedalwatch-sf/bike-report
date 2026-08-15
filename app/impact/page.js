@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header from '../../components/Header';
-import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function ImpactPage() {
@@ -19,8 +17,6 @@ export default function ImpactPage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <p className="eyebrow">Community impact</p>
         <p className="hint">

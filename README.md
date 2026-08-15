@@ -36,9 +36,14 @@ app/                  Next.js App Router pages (one folder per route)
   my-reports/            Everything you've submitted
   profile/[id]/           Anyone's public reporting history
   login/, signup/         Auth forms
+  reset-password/         Set a new password from an emailed reset link
   kitten/                 The easter egg (see below)
 components/            Shared UI: Header, Nav, Footer, ReportCard,
-                        ImageGallery, InterestButton
+                        ImageGallery, InterestButton, SiteChrome (renders
+                        Header + Nav once from the root layout, hidden on
+                        /kitten, instead of each page rendering its own
+                        copy -- keeps the logo from flashing on every
+                        client-side navigation)
 lib/                   supabaseClient, useUser/useProfile hooks, and
                         small helpers -- category list, search matching,
                         image upload, role levels, SF map center,

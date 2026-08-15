@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Header from '../../../components/Header';
-import Nav from '../../../components/Nav';
 import InterestButton from '../../../components/InterestButton';
 import ImageGallery from '../../../components/ImageGallery';
 import { supabase } from '../../../lib/supabaseClient';
@@ -126,8 +124,6 @@ export default function ReportDetailPage({ params }) {
   if (report === undefined) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content"><p className="hint">Loading…</p></div>
       </main>
     );
@@ -136,8 +132,6 @@ export default function ReportDetailPage({ params }) {
   if (report === null) {
     return (
       <main>
-        <Header />
-        <Nav />
         <div className="content">
           <div className="empty">Report not found.</div>
           <div style={{ marginTop: 14, textAlign: 'center' }}>
@@ -150,8 +144,6 @@ export default function ReportDetailPage({ params }) {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <button className="btn outline" onClick={() => router.push('/')} style={{ marginBottom: 16 }}>
           ← Back to Browse

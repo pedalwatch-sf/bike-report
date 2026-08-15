@@ -1,4 +1,5 @@
 import './globals.css';
+import SiteChrome from '../components/SiteChrome';
 import Footer from '../components/Footer';
 
 export const metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <SiteChrome />
         {children}
         <Footer />
       </body>

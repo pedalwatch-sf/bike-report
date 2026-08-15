@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Header from '../components/Header';
-import Nav from '../components/Nav';
 import ReportCard from '../components/ReportCard';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
@@ -146,8 +144,6 @@ export default function BrowsePage() {
 
   return (
     <main>
-      <Header />
-      <Nav />
       <div className="content">
         <div ref={mapRef} id="map" />
         <p className="hint" style={{ margin: '8px 0 14px' }}>
