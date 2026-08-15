@@ -39,7 +39,9 @@ lib/                   supabaseClient, useUser/useProfile hooks, and
                         small helpers -- category list, search matching,
                         image upload, role levels, SF map center,
                         haversine distance/duplicate radius, HTML
-                        escaping, and the colored map-pin icon factory
+                        escaping, the colored map-pin icon factory,
+                        status label text, and batched reporter-name
+                        lookup
 public/                Static assets -- logo.png (header mark + browser
                         favicon) and logosolid.png
 supabase/migrations/   Full schema history, see "Database schema" below
@@ -93,12 +95,13 @@ reports, suggest changes, or register interest.
   badges' colors elsewhere), a search box, and Active / Resolved /
   Following pills, all filtering the same page in place. Following
   lists every report you've registered interest in, any status, with
-  an "Updated" badge on ones whose status changed since you last
-  opened them, and a small dot on the Following pill itself so you
-  notice without opening it first -- each clears individually once you
-  actually open that report, not all at once. Each report card shows
-  its photo, category, interest
-  count, and an "I'm interested" toggle.
+  an "Updated" badge on ones whose status changed or got a new
+  progress-timeline entry since you last opened them, and a small dot
+  on the Following pill itself so you notice without opening it first
+  -- each clears individually once you actually open that report, not
+  all at once. Each report card shows its photo, category, who
+  reported it (links to their profile), interest count, and an "I'm
+  interested" toggle that asks for confirmation before unfollowing.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
   for context, alongside your own pin in yellow once you place one.
@@ -120,7 +123,8 @@ reports, suggest changes, or register interest.
 - **Moderate** (`/moderate`) -- gated to moderator role and above, three
   tabs:
   - *Reports* -- filter by status (pending/approved/rejected/resolved/
-    withdrawn) or search by title/description/category; edit any field
+    withdrawn) or search by title/description/category; each card shows
+    who reported it (links to their profile); edit any field
     including the location map and photos; approve/reject/resolve/
     reopen/delete; manage the progress timeline; view the interested-email
     list for a report. Flags a pending report with a warning when
