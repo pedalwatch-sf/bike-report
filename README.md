@@ -152,9 +152,11 @@ reports, suggest changes, or register interest.
     and every account you're allowed to manage: edit display name, ban/
     unban, and (admin+ only) change role via a dropdown. A search box
     filters by email or display name; a collapsible Filters panel adds
-    status (unconfirmed / banned / requested moderator) and role
-    dropdowns on top of that, both default to all and combine with the
-    search and each other.
+    two multi-select pill rows on top of that -- status (unconfirmed /
+    banned / requested moderator) and role -- where selecting more than
+    one pill in a row is an OR (e.g. unconfirmed pill + banned pill
+    shows accounts matching either), the two rows combine as an AND with
+    each other and with the search box, and each row defaults to "all".
   - *Activity* -- a chronological audit log of every suggestion and
     moderation action by anyone (who did what, and to which report or
     account), newest first. See "Full audit log for staff activity" in
