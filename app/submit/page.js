@@ -6,6 +6,7 @@ import Header from '../../components/Header';
 import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
+import { uploadImage } from '../../lib/uploadImage';
 
 const CATEGORIES = [
   'New bike lane needed',
@@ -108,35 +109,36 @@ export default function SubmitPage() {
 
     let image_url = null;
     if (imageFile) {
-      const ext = imageFile.name.split('.').pop();
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('submission-images')
-        .upload(path, imageFile);
-      if (uploadError) {
+      try {
+        image_url = await uploadImage(imageFile);
+      } catch (uploadError) {
         setMessage('Image upload failed: ' + uploadError.message);
         setSubmitting(false);
         return;
       }
-      const { data } = supabase.storage.from('submission-images').getPublicUrl(path);
-      image_url = data.publicUrl;
     }
 
-    const { error } = await supabase.from('suggestions').insert({
-      title: title.trim(),
-      description: description.trim(),
-      category,
-      lat: coords.lat,
-      lng: coords.lng,
-      status: 'pending',
-      image_url,
-      user_id: user.id,
-    });
+    const { data: inserted, error } = await supabase
+      .from('suggestions')
+      .insert({
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        lat: coords.lat,
+        lng: coords.lng,
+        status: 'pending',
+        user_id: user.id,
+      })
+      .select('id')
+      .single();
 
     setSubmitting(false);
     if (error) {
       setMessage('Something went wrong: ' + error.message);
       return;
+    }
+    if (image_url) {
+      await supabase.from('report_images').insert({ suggestion_id: inserted.id, url: image_url });
     }
     setMessage('Submitted for review — thank you!');
     setTitle('');
