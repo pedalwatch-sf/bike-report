@@ -158,7 +158,11 @@ reports, suggest changes, or register interest.
 - **My submissions** (`/my-reports`) -- everything you've submitted, any
   status, with a Withdraw button on each.
 - **Profile** (`/profile/[id]`) -- anyone's public reporting history
-  (approved/resolved reports only, plus an optional display name).
+  (approved/resolved reports only, plus an optional display name). When
+  viewed by a moderator or above, an additional Activity section shows
+  that account's own suggestion/moderation activity from the audit log
+  (see "Full audit log for staff activity" below) -- invisible to the
+  profile's owner and to plain-user viewers.
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
   Auth email/password forms.
 
@@ -207,9 +211,10 @@ a new timeline entry was posted since) ·
 `handle_new_user` (creates a profile row on signup) · `get_public_stats`
 (aggregate-only counts for `/impact`; intentionally has no
 authorization check since it never returns row content) ·
-`log_activity`, `get_activity_log` (the audit log behind Moderate's
-Activity tab -- see "Full audit log for staff activity" under Security
-model).
+`log_activity`, `get_activity_log`, `get_user_activity_log` (the audit
+log behind Moderate's Activity tab and a moderator-only section on
+public profiles -- see "Full audit log for staff activity" under
+Security model).
 
 ## Database schema
 
@@ -293,7 +298,9 @@ afterward, so the repo always shows what's actually running.
   suggestions and timeline posts) or an inline call from the relevant
   `SECURITY DEFINER` function (for account-management RPCs). Only
   activity from when this feature shipped onward is recorded -- there's
-  no backfill of prior history.
+  no backfill of prior history. A second RPC, `get_user_activity_log`,
+  applies the same moderator-and-above gate but filters to one account,
+  and backs the Activity section moderators see on a public profile.
 
 ## Running it locally
 
