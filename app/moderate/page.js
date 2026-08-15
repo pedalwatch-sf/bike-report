@@ -6,12 +6,21 @@ import Nav from '../../components/Nav';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 
+const STATUSES = ['pending', 'approved', 'rejected'];
+const ROLES = ['user', 'moderator', 'admin'];
+
 export default function ModeratePage() {
   const user = useUser();
   const [profile, setProfile] = useState(null);
-  const [pending, setPending] = useState([]);
-  const [requests, setRequests] = useState([]);
+  const [section, setSection] = useState('reports');
+
+  const [reports, setReports] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [editing, setEditing] = useState({});
+
+  const [users, setUsers] = useState([]);
+  const [requests, setRequests] = useState([]);
+
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -21,17 +30,27 @@ export default function ModeratePage() {
   async function loadProfile() {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
-    if (data && (data.role === 'moderator' || data.role === 'admin')) loadPending();
-    if (data && data.role === 'admin') loadRequests();
+    if (data && (data.role === 'moderator' || data.role === 'admin')) loadReports();
+    if (data && data.role === 'admin') {
+      loadUsers();
+      loadRequests();
+    }
   }
 
-  async function loadPending() {
+  async function loadReports() {
     const { data } = await supabase
       .from('suggestions')
       .select('*')
-      .eq('status', 'pending')
       .order('submitted_at', { ascending: false });
-    setPending(data || []);
+    setReports(data || []);
+  }
+
+  async function loadUsers() {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setUsers(data || []);
   }
 
   async function loadRequests() {
@@ -47,10 +66,33 @@ export default function ModeratePage() {
     const { error } = await supabase.rpc('admin_review_moderator_request', { target_id: id, approve });
     if (error) setMessage(error.message);
     loadRequests();
+    loadUsers();
+  }
+
+  async function setUserRole(id, role) {
+    setMessage('');
+    const { error } = await supabase.rpc('admin_set_user_role', { target_id: id, new_role: role });
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    loadUsers();
+    loadRequests();
   }
 
   function startEdit(s) {
-    setEditing((prev) => ({ ...prev, [s.id]: { title: s.title, description: s.description, category: s.category } }));
+    setEditing((prev) => ({
+      ...prev,
+      [s.id]: {
+        title: s.title,
+        description: s.description,
+        category: s.category,
+        status: s.status,
+        lat: s.lat ?? '',
+        lng: s.lng ?? '',
+        image_url: s.image_url || '',
+      },
+    }));
   }
   function cancelEdit(id) {
     setEditing((prev) => { const n = { ...prev }; delete n[id]; return n; });
@@ -60,14 +102,32 @@ export default function ModeratePage() {
   }
 
   async function act(id, action) {
-    let update = {};
+    setMessage('');
+    let update = null;
     if (action === 'approve') update = { status: 'approved' };
     else if (action === 'reject') update = { status: 'rejected' };
-    else if (action === 'edit') update = editing[id];
+    else if (action === 'reopen') update = { status: 'pending' };
+    else if (action === 'edit') {
+      const edit = editing[id];
+      update = {
+        ...edit,
+        lat: edit.lat === '' ? null : Number(edit.lat),
+        lng: edit.lng === '' ? null : Number(edit.lng),
+        image_url: edit.image_url.trim() || null,
+      };
+    }
     const { error } = await supabase.from('suggestions').update(update).eq('id', id);
     if (error) setMessage(error.message);
     cancelEdit(id);
-    loadPending();
+    loadReports();
+  }
+
+  async function deleteReport(id) {
+    if (!window.confirm('Delete this report permanently? This cannot be undone.')) return;
+    setMessage('');
+    const { error } = await supabase.from('suggestions').delete().eq('id', id);
+    if (error) setMessage(error.message);
+    loadReports();
   }
 
   async function requestModerator() {
@@ -105,6 +165,8 @@ export default function ModeratePage() {
   }
 
   const isModOrAdmin = profile && (profile.role === 'moderator' || profile.role === 'admin');
+  const isAdmin = profile?.role === 'admin';
+  const visibleReports = statusFilter === 'all' ? reports : reports.filter((r) => r.status === statusFilter);
 
   return (
     <main>
@@ -127,33 +189,91 @@ export default function ModeratePage() {
           </div>
         )}
 
-        {profile?.role === 'admin' && requests.length > 0 && (
+        {isAdmin && (
+          <div className="filter-row">
+            <button
+              className={`filter-btn ${section === 'reports' ? 'active' : ''}`}
+              onClick={() => setSection('reports')}
+            >
+              Reports
+            </button>
+            <button
+              className={`filter-btn ${section === 'users' ? 'active' : ''}`}
+              onClick={() => setSection('users')}
+            >
+              User accounts
+            </button>
+          </div>
+        )}
+
+        {isAdmin && section === 'users' && (
           <>
-            <p className="hint" style={{ margin: '4px 0 10px' }}>Pending moderator requests</p>
-            {requests.map((r) => (
-              <div className="card" key={r.id}>
-                <h3>{r.email}</h3>
-                <div className="row">
-                  <button className="btn teal" onClick={() => reviewRequest(r.id, true)}>Approve</button>
-                  <button className="btn coral" onClick={() => reviewRequest(r.id, false)}>Deny</button>
+            {requests.length > 0 && (
+              <>
+                <p className="hint" style={{ margin: '4px 0 10px' }}>Pending moderator requests</p>
+                {requests.map((r) => (
+                  <div className="card" key={r.id}>
+                    <h3>{r.email}</h3>
+                    <div className="row">
+                      <button className="btn teal" onClick={() => reviewRequest(r.id, true)}>Approve</button>
+                      <button className="btn coral" onClick={() => reviewRequest(r.id, false)}>Deny</button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            <p className="hint" style={{ margin: '14px 0' }}>
+              All accounts — change a user&apos;s role directly.
+            </p>
+            {users.length === 0 && <div className="empty">No accounts yet.</div>}
+            {users.map((u) => (
+              <div className="card" key={u.id}>
+                <h3>{u.email}</h3>
+                <span className={`badge role-${u.role}`}>{u.role}</span>
+                {u.moderator_status && u.moderator_status !== 'none' && (
+                  <span className="badge cat">Moderator request: {u.moderator_status}</span>
+                )}
+                <div className="meta">Joined {new Date(u.created_at).toLocaleDateString()}</div>
+                <div className="row" style={{ marginTop: 8 }}>
+                  {ROLES.map((role) => (
+                    <button
+                      key={role}
+                      className={`btn ${u.role === role ? 'teal' : 'outline'}`}
+                      disabled={u.id === user.id}
+                      onClick={() => setUserRole(u.id, role)}
+                    >
+                      Make {role}
+                    </button>
+                  ))}
                 </div>
+                {u.id === user.id && <p className="hint" style={{ marginTop: 6 }}>You can&apos;t change your own role.</p>}
               </div>
             ))}
           </>
         )}
 
-        {isModOrAdmin && (
+        {isModOrAdmin && (!isAdmin || section === 'reports') && (
           <>
-            <p className="hint" style={{ margin: '14px 0' }}>
-              Pending submissions — edit if needed, then approve or reject.
-            </p>
-            {pending.length === 0 && <div className="empty">Nothing waiting for review.</div>}
-            {pending.map((s) => {
+            <div className="filter-row">
+              {['all', ...STATUSES].map((f) => (
+                <button
+                  key={f}
+                  className={`filter-btn ${statusFilter === f ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(f)}
+                >
+                  {f} {f !== 'all' && `(${reports.filter((r) => r.status === f).length})`}
+                </button>
+              ))}
+            </div>
+
+            {visibleReports.length === 0 && <div className="empty">No reports in this view.</div>}
+            {visibleReports.map((s) => {
               const edit = editing[s.id];
               return (
                 <div className="card" key={s.id}>
-                  {s.image_url && <img src={s.image_url} alt="" className="card-image" />}
-                  <span className="badge pending">Pending</span>
+                  {!edit && s.image_url && <img src={s.image_url} alt="" className="card-image" />}
+                  <span className={`badge ${s.status}`}>{s.status}</span>
                   <span className="badge cat">{s.category}</span>
 
                   {edit ? (
@@ -164,6 +284,24 @@ export default function ModeratePage() {
                       <textarea value={edit.description} onChange={(e) => updateField(s.id, 'description', e.target.value)} />
                       <label>Category</label>
                       <input type="text" value={edit.category} onChange={(e) => updateField(s.id, 'category', e.target.value)} />
+                      <label>Status</label>
+                      <select value={edit.status} onChange={(e) => updateField(s.id, 'status', e.target.value)}>
+                        {STATUSES.map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                      <div className="field-grid">
+                        <div>
+                          <label>Latitude</label>
+                          <input type="number" step="any" value={edit.lat} onChange={(e) => updateField(s.id, 'lat', e.target.value)} />
+                        </div>
+                        <div>
+                          <label>Longitude</label>
+                          <input type="number" step="any" value={edit.lng} onChange={(e) => updateField(s.id, 'lng', e.target.value)} />
+                        </div>
+                      </div>
+                      <label>Image URL</label>
+                      <input type="text" value={edit.image_url} onChange={(e) => updateField(s.id, 'image_url', e.target.value)} placeholder="https://…" />
                     </>
                   ) : (
                     <>
@@ -180,12 +318,22 @@ export default function ModeratePage() {
                     {!edit && <button className="btn outline" onClick={() => startEdit(s)}>Edit</button>}
                     {edit && (
                       <>
-                        <button className="btn outline" onClick={() => act(s.id, 'edit')}>Save edit</button>
+                        <button className="btn outline" onClick={() => act(s.id, 'edit')}>Save changes</button>
                         <button className="btn outline" onClick={() => cancelEdit(s.id)}>Cancel</button>
                       </>
                     )}
-                    <button className="btn teal" onClick={() => act(s.id, 'approve')}>Approve</button>
-                    <button className="btn coral" onClick={() => act(s.id, 'reject')}>Reject</button>
+                    {!edit && s.status !== 'approved' && (
+                      <button className="btn teal" onClick={() => act(s.id, 'approve')}>Approve</button>
+                    )}
+                    {!edit && s.status !== 'rejected' && (
+                      <button className="btn coral" onClick={() => act(s.id, 'reject')}>Reject</button>
+                    )}
+                    {!edit && s.status !== 'pending' && (
+                      <button className="btn outline" onClick={() => act(s.id, 'reopen')}>Reopen</button>
+                    )}
+                    {!edit && (
+                      <button className="btn coral" onClick={() => deleteReport(s.id)}>Delete</button>
+                    )}
                   </div>
                 </div>
               );
