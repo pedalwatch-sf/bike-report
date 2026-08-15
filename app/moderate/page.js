@@ -11,6 +11,7 @@ import { matchesSearch } from '../../lib/searchReports';
 import { roleLevel } from '../../lib/roles';
 import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
+import { dotIcon } from '../../lib/leafletDotIcon';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
@@ -781,7 +782,7 @@ function LocationMap({ lat, lng, onChange }) {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
-      const marker = L.marker(start).addTo(map);
+      const marker = L.marker(start, { icon: dotIcon(L, 'var(--yellow)') }).addTo(map);
       map.on('click', (e) => {
         marker.setLatLng(e.latlng);
         onChange(e.latlng.lat, e.latlng.lng);

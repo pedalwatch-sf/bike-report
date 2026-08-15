@@ -10,6 +10,7 @@ import ImageGallery from '../../../components/ImageGallery';
 import { supabase } from '../../../lib/supabaseClient';
 import { useProfile } from '../../../lib/useProfile';
 import { uploadImage } from '../../../lib/uploadImage';
+import { dotIcon } from '../../../lib/leafletDotIcon';
 
 const ACTIVE_STATUSES = ['approved', 'resolved'];
 
@@ -82,7 +83,8 @@ export default function ReportDetailPage({ params }) {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
-    L.marker([report.lat, report.lng]).addTo(map);
+    const color = report.status === 'resolved' ? 'var(--yellow)' : 'var(--teal)';
+    L.marker([report.lat, report.lng], { icon: dotIcon(L, color) }).addTo(map);
     mapInstance.current = map;
   }
 
