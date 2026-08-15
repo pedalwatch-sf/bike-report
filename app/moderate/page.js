@@ -435,6 +435,7 @@ export default function ModeratePage() {
                     {canManage && (
                       <button
                         className={u.banned ? 'btn teal' : 'btn coral'}
+                        style={{ marginLeft: 'auto' }}
                         onClick={() => toggleBan(u.id, !u.banned)}
                       >
                         {u.banned ? 'Unban' : 'Ban'}
@@ -442,16 +443,13 @@ export default function ModeratePage() {
                     )}
                   </div>
                   {isAdmin && canManage && (
-                    <div className="row" style={{ marginTop: 8 }}>
-                      {ROLES.map((role) => (
-                        <button
-                          key={role}
-                          className={`btn ${u.role === role ? 'teal' : 'outline'}`}
-                          onClick={() => setUserRole(u.id, role)}
-                        >
-                          Make {role}
-                        </button>
-                      ))}
+                    <div style={{ marginTop: 8 }}>
+                      <label style={{ margin: '0 0 6px' }}>Role</label>
+                      <select value={u.role} onChange={(e) => setUserRole(u.id, e.target.value)}>
+                        {ROLES.map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
                   {!canManage && (
