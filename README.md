@@ -172,8 +172,10 @@ functions instead, each doing its own authorization check internally:
 helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
 `request_moderator_access`, `moderator_set_display_name`,
 `moderator_set_banned` (account management)
-· `set_display_name`, `get_public_profile` (your own profile / anyone's
-public profile) · `get_timeline_updates`, `get_all_timeline_updates_for_moderation`
+· `set_display_name`, `get_public_profile`, `get_public_profiles` (your
+own profile / anyone's public profile, single or batched -- the batched
+form resolves reporter display names for a whole page of report cards
+in one round trip, used on Browse and Moderate) · `get_timeline_updates`, `get_all_timeline_updates_for_moderation`
 (progress timeline, with author email masked for non-moderators) ·
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
 `unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`,

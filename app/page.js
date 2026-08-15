@@ -10,6 +10,7 @@ import { matchesSearch } from '../lib/searchReports';
 import { SF_CENTER } from '../lib/constants';
 import { escapeHtml } from '../lib/escapeHtml';
 import { dotIcon } from '../lib/leafletDotIcon';
+import { attachReporterNames } from '../lib/reporterNames';
 
 export default function BrowsePage() {
   const user = useUser();
@@ -55,7 +56,7 @@ export default function BrowsePage() {
     const bySubscribedOrder = ids
       .map((id) => (data || []).find((r) => r.id === id))
       .filter(Boolean);
-    setFollowingReports(bySubscribedOrder);
+    setFollowingReports(await attachReporterNames(bySubscribedOrder));
     setUpdatedIds(
       new Set(
         (subs || [])
@@ -76,7 +77,7 @@ export default function BrowsePage() {
       .select('*, subscribers(count), report_images(url)')
       .in('status', ['approved', 'resolved'])
       .order('submitted_at', { ascending: false });
-    if (!error) setSuggestions(data || []);
+    if (!error) setSuggestions(await attachReporterNames(data || []));
     setLoaded(true);
   }
 
