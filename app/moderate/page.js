@@ -324,11 +324,12 @@ export default function ModeratePage() {
     .filter((r) => matchesSearch(r, reportSearch));
   const pendingClusters = {};
   const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
+  const approvedReports = reports.filter((r) => r.status === 'approved' && r.lat != null && r.lng != null);
+  const nearbyCandidates = [...pendingReports, ...approvedReports];
   pendingReports.forEach((a) => {
-    const others = pendingReports.filter(
+    const others = nearbyCandidates.filter(
       (b) =>
         b.id !== a.id &&
-        b.category === a.category &&
         haversineMeters(a.lat, a.lng, b.lat, b.lng) <= DUPLICATE_RADIUS_METERS
     );
     if (others.length > 0) pendingClusters[a.id] = others;
@@ -525,9 +526,11 @@ export default function ModeratePage() {
 
                   {!edit && pendingClusters[s.id] && (
                     <p className="hint" style={{ color: 'var(--coral)', margin: '8px 0 0' }}>
-                      ⚠ {pendingClusters[s.id].length} other pending report
-                      {pendingClusters[s.id].length > 1 ? 's' : ''} nearby, same category:{' '}
-                      {pendingClusters[s.id].map((r) => r.title).join(', ')}
+                      ⚠ {pendingClusters[s.id].length} other report
+                      {pendingClusters[s.id].length > 1 ? 's' : ''} nearby, possible duplicate:{' '}
+                      {pendingClusters[s.id]
+                        .map((r) => `${r.title} (${r.status})`)
+                        .join(', ')}
                     </p>
                   )}
 
