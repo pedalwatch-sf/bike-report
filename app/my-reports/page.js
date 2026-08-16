@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import ImageGallery from '../../components/ImageGallery';
+import LoadMoreButton from '../../components/LoadMoreButton';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
+import { usePagination } from '../../lib/usePagination';
 
 export default function MyReportsPage() {
   const user = useUser();
   const [reports, setReports] = useState(undefined);
   const [message, setMessage] = useState('');
+  const page = usePagination(reports || [], 'my-reports');
 
   useEffect(() => {
     if (user) loadReports();
@@ -65,7 +68,7 @@ export default function MyReportsPage() {
         <p className="eyebrow">My submissions</p>
         {message && <p className="hint">{message}</p>}
         {reports.length === 0 && <div className="empty">You haven&apos;t submitted any reports yet.</div>}
-        {reports.map((r) => (
+        {page.visible.map((r) => (
           <div className="card" key={r.id}>
             <ImageGallery images={r.report_images} />
             <span className={`badge ${r.status}`}>{r.status}</span>
@@ -83,6 +86,7 @@ export default function MyReportsPage() {
             </div>
           </div>
         ))}
+        <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
       </div>
     </main>
   );

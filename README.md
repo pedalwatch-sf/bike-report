@@ -38,21 +38,27 @@ app/                  Next.js App Router pages (one folder per route)
   login/, signup/         Auth forms
   reset-password/         Set a new password from an emailed reset link
   kitten/                 The easter egg (see below)
-components/            Shared UI: Header, Nav, Footer, ReportCard,
-                        ImageGallery, InterestButton, SiteChrome (renders
-                        Header + Nav once from the root layout, hidden on
-                        /kitten, instead of each page rendering its own
-                        copy -- keeps the logo from flashing on every
-                        client-side navigation)
+components/            Shared UI: Header, Nav (shows a red dot on the
+                        Moderate tab when something needs attention --
+                        see "How access works"), Footer, ReportCard,
+                        ImageGallery, InterestButton, LoadMoreButton,
+                        SiteChrome (renders Header + Nav once from the
+                        root layout, hidden on /kitten, instead of each
+                        page rendering its own copy -- keeps the logo
+                        from flashing on every client-side navigation)
 lib/                   supabaseClient, useUser/useProfile hooks, and
                         small helpers -- category list, search matching,
                         image upload, role levels, SF map center,
                         haversine distance/duplicate radius, HTML
                         escaping, the colored map-pin icon factory,
                         status label text, batched reporter-name lookup,
-                        activity-log action labels, and the persisted
+                        activity-log action labels, the persisted
                         pill/tab filter hooks shared by Browse and
-                        Moderate
+                        Moderate, and usePagination (client-side "Load
+                        more" pagination, used everywhere a list can
+                        grow -- Browse, all four Moderate tabs, My
+                        submissions, a profile's reports/activity, and a
+                        report's progress timeline)
   __tests__/             Vitest unit tests for the helpers above
 public/                Static assets -- logo.png (header mark + browser
                         favicon) and logosolid.png
@@ -91,6 +97,16 @@ own level, including their own.
   and can edit/ban accounts below their level.
 - **Admins** additionally approve moderator requests and can promote or
   demote anyone below admin level.
+
+Moderators and above see a small red dot on the Nav bar's Moderate tab,
+from any page, whenever something needs attention -- pending reports,
+pending change suggestions, and (admins only, since only admins can act
+on them) pending moderator-access requests. It's backed by a single
+cheap `get_moderation_pending_count()` count query rather than Moderate's
+full row data, refetched on every navigation so it clears shortly after
+you resolve whatever it was flagging. Inside Moderate itself, the
+Reports and User accounts section tabs carry their own matching dots
+(Suggested changes already shows a count instead).
 - **Owner** (that's you) sits above admin -- it can manage admin accounts
   too, which regular admins can't do to each other. It's not a role
   anyone can grant through the UI; see "Making yourself the owner" below.
@@ -118,7 +134,9 @@ reports, suggest changes, or register interest.
   actually open that report, not all at once. Each report card shows
   its photo, category, who reported it (links to their profile),
   interest count, and an "I'm interested" toggle that asks for
-  confirmation before unfollowing.
+  confirmation before unfollowing. Cards load 20 at a time with a "Load
+  more" button, same as every list of unbounded size in this app (see
+  `usePagination` under `lib/` above).
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
   for context (its popup links to that report, opening in a new tab so
