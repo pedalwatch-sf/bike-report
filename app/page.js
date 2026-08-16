@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ReportCard from '../components/ReportCard';
+import LoadMoreButton from '../components/LoadMoreButton';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
 import { matchesSearch } from '../lib/searchReports';
@@ -11,6 +12,7 @@ import { dotIcon } from '../lib/leafletDotIcon';
 import { attachReporterNames } from '../lib/reporterNames';
 import { CATEGORIES } from '../lib/categories';
 import { usePersistedFilter, usePersistedMultiFilter, toggleFilterValue } from '../lib/usePersistedFilter';
+import { usePagination } from '../lib/usePagination';
 
 const VIEWS = ['active', 'resolved', 'following'];
 const CATEGORY_FILTERS = ['all', ...CATEGORIES];
@@ -140,6 +142,8 @@ export default function BrowsePage() {
   const visible = view === 'active' ? active : resolved;
   const visibleFollowing = (followingReports || []).filter((r) => matchesCategoryFilters(r, categoryFilters));
   const activeCategoryFilterCount = categoryFilters.includes('all') ? 0 : categoryFilters.length;
+  const currentList = view === 'following' ? visibleFollowing : visible;
+  const page = usePagination(currentList, `${view}|${search}|${categoryFilters.join(',')}`);
 
   return (
     <main>
@@ -221,7 +225,7 @@ export default function BrowsePage() {
               <div className="empty">No followed reports match this category filter.</div>
             )}
             {user &&
-              visibleFollowing.map((r) => (
+              page.visible.map((r) => (
                 <ReportCard
                   key={r.id}
                   report={r}
@@ -230,6 +234,9 @@ export default function BrowsePage() {
                   onFollowingChange={(nowFollowing) => handleFollowingChange(r, nowFollowing)}
                 />
               ))}
+            {user && (
+              <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
+            )}
           </>
         ) : (
           <>
@@ -242,7 +249,7 @@ export default function BrowsePage() {
                   : 'No resolved reports yet.'}
               </div>
             )}
-            {visible.map((s) => (
+            {page.visible.map((s) => (
               <ReportCard
                 key={s.id}
                 report={s}
@@ -250,6 +257,7 @@ export default function BrowsePage() {
                 onFollowingChange={(nowFollowing) => handleFollowingChange(s, nowFollowing)}
               />
             ))}
+            <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
           </>
         )}
       </div>

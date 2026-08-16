@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import ReportCard from '../../../components/ReportCard';
+import LoadMoreButton from '../../../components/LoadMoreButton';
 import { supabase } from '../../../lib/supabaseClient';
 import { useUser } from '../../../lib/useUser';
 import { isModOrAdmin } from '../../../lib/roles';
 import { ACTIVITY_LABELS } from '../../../lib/activityLabels';
+import { usePagination } from '../../../lib/usePagination';
 
 export default function ProfilePage({ params }) {
   const { id } = params;
@@ -71,6 +73,9 @@ export default function ProfilePage({ params }) {
     setReports(data || []);
   }
 
+  const reportsPage = usePagination(reports, `reports|${id}`);
+  const activityPage = usePagination(activityLog, `activity|${id}`);
+
   if (profile === undefined) {
     return (
       <main>
@@ -101,9 +106,14 @@ export default function ProfilePage({ params }) {
           Contributions {reports.length > 0 && `(${reports.length})`}
         </p>
         {reports.length === 0 && <div className="empty">No public reports yet.</div>}
-        {reports.map((s) => (
+        {reportsPage.visible.map((s) => (
           <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
         ))}
+        <LoadMoreButton
+          hasMore={reportsPage.hasMore}
+          remaining={reportsPage.total - reportsPage.visible.length}
+          onClick={reportsPage.loadMore}
+        />
 
         {viewerIsModOrAdmin && (
           <>
@@ -111,7 +121,7 @@ export default function ProfilePage({ params }) {
               Activity {activityLog.length > 0 && `(${activityLog.length})`} — visible to moderators and above only
             </p>
             {activityLog.length === 0 && <div className="empty">No suggestion or moderation activity yet.</div>}
-            {activityLog.map((entry) => (
+            {activityPage.visible.map((entry) => (
               <div className="card" key={entry.id}>
                 <div className="meta">{new Date(entry.created_at).toLocaleString()}</div>
                 <p style={{ margin: 0 }}>
@@ -128,6 +138,11 @@ export default function ProfilePage({ params }) {
                 )}
               </div>
             ))}
+            <LoadMoreButton
+              hasMore={activityPage.hasMore}
+              remaining={activityPage.total - activityPage.visible.length}
+              onClick={activityPage.loadMore}
+            />
           </>
         )}
       </div>

@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import InterestButton from '../../../components/InterestButton';
 import ImageGallery from '../../../components/ImageGallery';
+import LoadMoreButton from '../../../components/LoadMoreButton';
 import { supabase } from '../../../lib/supabaseClient';
 import { useProfile } from '../../../lib/useProfile';
 import { uploadImage } from '../../../lib/uploadImage';
 import { dotIcon } from '../../../lib/leafletDotIcon';
 import { statusLabel } from '../../../lib/statusLabel';
+import { usePagination } from '../../../lib/usePagination';
 
 const ACTIVE_STATUSES = ['approved', 'resolved'];
 
@@ -121,6 +123,8 @@ export default function ReportDetailPage({ params }) {
     setChangeSent(true);
   }
 
+  const updatesPage = usePagination(updates, `updates|${id}`);
+
   if (report === undefined) {
     return (
       <main>
@@ -172,7 +176,7 @@ export default function ReportDetailPage({ params }) {
 
         <p className="hint" style={{ margin: '18px 0 10px' }}>Progress timeline</p>
         {updates.length === 0 && <div className="empty">No updates yet.</div>}
-        {updates.map((u) => (
+        {updatesPage.visible.map((u) => (
           <div className="card" key={u.id}>
             <div className="meta">
               {new Date(u.created_at).toLocaleString()}
@@ -181,6 +185,11 @@ export default function ReportDetailPage({ params }) {
             <p style={{ margin: 0 }}>{u.message}</p>
           </div>
         ))}
+        <LoadMoreButton
+          hasMore={updatesPage.hasMore}
+          remaining={updatesPage.total - updatesPage.visible.length}
+          onClick={updatesPage.loadMore}
+        />
 
         {user && ACTIVE_STATUSES.includes(report.status) && (
           <div className="card">

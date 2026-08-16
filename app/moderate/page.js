@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ImageGallery from '../../components/ImageGallery';
+import LoadMoreButton from '../../components/LoadMoreButton';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 import { uploadImage } from '../../lib/uploadImage';
@@ -14,6 +15,7 @@ import { CATEGORIES } from '../../lib/categories';
 import { attachReporterNames } from '../../lib/reporterNames';
 import { ACTIVITY_LABELS } from '../../lib/activityLabels';
 import { usePersistedFilter, usePersistedMultiFilter, toggleFilterValue } from '../../lib/usePersistedFilter';
+import { usePagination } from '../../lib/usePagination';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
@@ -407,6 +409,16 @@ export default function ModeratePage() {
   const activeUserFilterCount =
     (userStatusFilters.includes('all') ? 0 : userStatusFilters.length) +
     (elevationFilters.includes('all') ? 0 : elevationFilters.length);
+  const reportsPage = usePagination(
+    visibleReports,
+    `${statusFilter}|${reportCategoryFilters.join(',')}|${reportSearch}`
+  );
+  const usersPage = usePagination(
+    visibleUsers,
+    `${userSearch}|${userStatusFilters.join(',')}|${elevationFilters.join(',')}`
+  );
+  const changesPage = usePagination(changeSuggestions, 'changes');
+  const activityPage = usePagination(activityLog, 'activity');
   const pendingClusters = {};
   const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
   const approvedReports = reports.filter((r) => r.status === 'approved' && r.lat != null && r.lng != null);
@@ -454,6 +466,9 @@ export default function ModeratePage() {
               onClick={() => setSection('reports')}
             >
               Reports
+              {reports.some((r) => r.status === 'pending') && (
+                <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />
+              )}
             </button>
             <button
               className={`filter-btn ${section === 'changes' ? 'active' : ''}`}
@@ -466,6 +481,7 @@ export default function ModeratePage() {
               onClick={() => setSection('users')}
             >
               User accounts
+              {requests.length > 0 && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
             </button>
             <button
               className={`filter-btn ${section === 'activity' ? 'active' : ''}`}
@@ -482,7 +498,7 @@ export default function ModeratePage() {
               Changes users have suggested for active reports.
             </p>
             {changeSuggestions.length === 0 && <div className="empty">No pending suggestions.</div>}
-            {changeSuggestions.map((cs) => (
+            {changesPage.visible.map((cs) => (
               <ChangeSuggestionCard
                 key={cs.id}
                 cs={cs}
@@ -490,6 +506,11 @@ export default function ModeratePage() {
                 onAddImage={addSuggestedImageToReport}
               />
             ))}
+            <LoadMoreButton
+              hasMore={changesPage.hasMore}
+              remaining={changesPage.total - changesPage.visible.length}
+              onClick={changesPage.loadMore}
+            />
           </>
         )}
 
@@ -574,7 +595,7 @@ export default function ModeratePage() {
                 {users.length === 0 ? 'No accounts yet.' : 'No accounts match your search/filters.'}
               </div>
             )}
-            {visibleUsers.map((u) => {
+            {usersPage.visible.map((u) => {
               const canManage = roleLevel(u.role) < roleLevel(profile.role);
               const nameDraft = nameDrafts[u.id];
               return (
@@ -636,6 +657,11 @@ export default function ModeratePage() {
                 </div>
               );
             })}
+            <LoadMoreButton
+              hasMore={usersPage.hasMore}
+              remaining={usersPage.total - usersPage.visible.length}
+              onClick={usersPage.loadMore}
+            />
           </>
         )}
 
@@ -645,7 +671,7 @@ export default function ModeratePage() {
               Every suggestion and moderation action, most recent first.
             </p>
             {activityLog.length === 0 && <div className="empty">No activity yet.</div>}
-            {activityLog.map((entry) => (
+            {activityPage.visible.map((entry) => (
               <div className="card" key={entry.id}>
                 <div className="meta">{new Date(entry.created_at).toLocaleString()}</div>
                 <p style={{ margin: 0 }}>
@@ -663,6 +689,11 @@ export default function ModeratePage() {
                 )}
               </div>
             ))}
+            <LoadMoreButton
+              hasMore={activityPage.hasMore}
+              remaining={activityPage.total - activityPage.visible.length}
+              onClick={activityPage.loadMore}
+            />
           </>
         )}
 
@@ -738,7 +769,7 @@ export default function ModeratePage() {
             {visibleReports.length === 0 && (
               <div className="empty">{reportSearch.trim() ? 'No reports match your search.' : 'No reports in this view.'}</div>
             )}
-            {visibleReports.map((s) => {
+            {reportsPage.visible.map((s) => {
               const edit = editing[s.id];
               return (
                 <div className="card" key={s.id}>
@@ -922,6 +953,11 @@ export default function ModeratePage() {
                 </div>
               );
             })}
+            <LoadMoreButton
+              hasMore={reportsPage.hasMore}
+              remaining={reportsPage.total - reportsPage.visible.length}
+              onClick={reportsPage.loadMore}
+            />
           </>
         )}
 
