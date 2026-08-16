@@ -143,9 +143,13 @@ reports, suggest changes, or register interest.
   visitors.
 - **Moderate** (`/moderate`) -- gated to moderator role and above, four
   tabs:
-  - *Reports* -- filter by status (pending/approved/rejected/resolved/
-    withdrawn) or search by title/description/category; each card shows
-    who reported it (links to their profile); edit any field
+  - *Reports* -- search by title/description/category, plus a
+    collapsible Filters panel with a status pill row (pending/approved/
+    rejected/resolved/withdrawn, single-choice -- same as before) and a
+    category pill row (multi-select, same categories as Submit),
+    combining with each other and with search (same panel pattern as
+    User accounts' filters). Each card shows who reported it (links to
+    their profile); edit any field
     including the location map and photos; approve/reject/resolve/
     reopen/delete; manage the progress timeline; view the interested-email
     list for a report. Flags a pending report with a warning when
