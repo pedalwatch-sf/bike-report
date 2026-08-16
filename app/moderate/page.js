@@ -18,6 +18,7 @@ import { usePersistedFilter, usePersistedMultiFilter, toggleFilterValue } from '
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
 const STALE_DAYS = 7;
+const REPORT_CATEGORY_FILTERS = ['all', ...CATEGORIES];
 
 const ACCOUNT_STATUS_FILTERS = ['all', 'unconfirmed', 'banned', 'requested moderator'];
 function matchesAccountStatus(u, filter) {
@@ -69,6 +70,14 @@ export default function ModeratePage() {
 
   const [reports, setReports] = useState([]);
   const [statusFilter, setStatusFilter] = usePersistedFilter('moderate-status-filter', 'pending', ['all', ...STATUSES]);
+  const [reportCategoryFilters, setReportCategoryFilters] = usePersistedMultiFilter(
+    'moderate-report-category-filters',
+    ['all'],
+    REPORT_CATEGORY_FILTERS
+  );
+  const [reportFiltersOpen, setReportFiltersOpen] = useState(
+    () => statusFilter !== 'all' || !reportCategoryFilters.includes('all')
+  );
   const [reportSearch, setReportSearch] = useState('');
   const [editing, setEditing] = useState({});
 
@@ -387,7 +396,10 @@ export default function ModeratePage() {
   const isAdmin = profile && roleLevel(profile.role) >= 3;
   const visibleReports = reports
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+    .filter((r) => reportCategoryFilters.includes('all') || reportCategoryFilters.includes(r.category))
     .filter((r) => matchesSearch(r, reportSearch));
+  const activeReportFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) + (reportCategoryFilters.includes('all') ? 0 : reportCategoryFilters.length);
   const visibleUsers = users
     .filter((u) => matchesUserSearch(u, userSearch))
     .filter((u) => userStatusFilters.includes('all') || userStatusFilters.some((f) => matchesAccountStatus(u, f)))
@@ -663,20 +675,56 @@ export default function ModeratePage() {
               placeholder="Search reports by title, description, or category…"
               style={{ marginTop: 14 }}
             />
-            <div className="filter-row">
-              {['all', ...STATUSES].map((f) => (
+            <div className="row" style={{ margin: '10px 0' }}>
+              <button
+                type="button"
+                className={`filter-btn ${reportFiltersOpen ? 'active' : ''}`}
+                onClick={() => setReportFiltersOpen((v) => !v)}
+              >
+                Filters{activeReportFilterCount > 0 && ` (${activeReportFilterCount})`}
+              </button>
+              {activeReportFilterCount > 0 && (
                 <button
-                  key={f}
-                  className={`filter-btn ${statusFilter === f ? 'active' : ''}`}
-                  onClick={() => {
-                    if (statusFilter === f) setEditing({});
-                    else setStatusFilter(f);
-                  }}
+                  type="button"
+                  className="btn outline"
+                  onClick={() => { setStatusFilter('all'); setReportCategoryFilters(['all']); }}
                 >
-                  {f} {f !== 'all' && `(${reports.filter((r) => r.status === f).length})`}
+                  Clear filters
                 </button>
-              ))}
+              )}
             </div>
+            {reportFiltersOpen && (
+              <div className="card">
+                <label>Status</label>
+                <div className="filter-row">
+                  {['all', ...STATUSES].map((f) => (
+                    <button
+                      key={f}
+                      className={`filter-btn ${statusFilter === f ? 'active' : ''}`}
+                      onClick={() => {
+                        if (statusFilter === f) setEditing({});
+                        else setStatusFilter(f);
+                      }}
+                    >
+                      {f} {f !== 'all' && `(${reports.filter((r) => r.status === f).length})`}
+                    </button>
+                  ))}
+                </div>
+                <label>Category</label>
+                <div className="filter-row">
+                  {REPORT_CATEGORY_FILTERS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`filter-btn ${reportCategoryFilters.includes(c) ? 'active' : ''}`}
+                      onClick={() => setReportCategoryFilters((prev) => toggleFilterValue(prev, c))}
+                    >
+                      {c} {c !== 'all' && `(${reports.filter((r) => r.category === c).length})`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button
               className="btn outline"
