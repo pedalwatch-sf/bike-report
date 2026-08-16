@@ -19,9 +19,17 @@ export default function LoginPage() {
   const resetCaptcha = useRef();
   const router = useRouter();
 
+  const [showResend, setShowResend] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendCaptchaToken, setResendCaptchaToken] = useState('');
+  const resendCaptcha = useRef();
+
   async function handleLogin() {
     setBusy(true);
     setMessage('');
+    setShowResend(false);
+    setResendMessage('');
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
@@ -32,6 +40,7 @@ export default function LoginPage() {
     if (error) {
       setBusy(false);
       setMessage(error.message);
+      if (error.code === 'email_not_confirmed') setShowResend(true);
       return;
     }
     const { data, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -94,6 +103,24 @@ export default function LoginPage() {
       return;
     }
     setMessage('If an account exists for that email, a password reset link has been sent.');
+  }
+
+  async function handleResendConfirmation() {
+    setResendBusy(true);
+    setResendMessage('');
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: { captchaToken: resendCaptchaToken },
+    });
+    resendCaptcha.current?.reset();
+    setResendCaptchaToken('');
+    setResendBusy(false);
+    if (error) {
+      setResendMessage(error.message);
+      return;
+    }
+    setResendMessage('Confirmation email sent — check your inbox.');
   }
 
   if (stage === 'forgot') {
@@ -195,6 +222,28 @@ export default function LoginPage() {
             </button>
           </div>
           {message && <p className="hint" style={{ color: 'var(--coral)' }}>{message}</p>}
+          {showResend && (
+            <div style={{ marginTop: 14 }}>
+              <p className="hint">Resend the confirmation email:</p>
+              <Turnstile
+                ref={resendCaptcha}
+                siteKey={TURNSTILE_SITE_KEY}
+                options={{ theme: 'dark' }}
+                onSuccess={(token) => setResendCaptchaToken(token)}
+                onExpire={() => setResendCaptchaToken('')}
+              />
+              <div style={{ marginTop: 10 }}>
+                <button
+                  className="btn outline"
+                  onClick={handleResendConfirmation}
+                  disabled={resendBusy || !resendCaptchaToken}
+                >
+                  {resendBusy ? 'Sending…' : 'Resend confirmation email'}
+                </button>
+              </div>
+              {resendMessage && <p className="hint" style={{ marginTop: 8 }}>{resendMessage}</p>}
+            </div>
+          )}
           <p className="hint" style={{ marginTop: 14 }}>
             No account yet? <a href="/signup" style={{ color: 'var(--teal)' }}>Create one</a>
           </p>

@@ -13,6 +13,7 @@ import { dotIcon } from '../../lib/leafletDotIcon';
 import { CATEGORIES } from '../../lib/categories';
 import { attachReporterNames } from '../../lib/reporterNames';
 import { ACTIVITY_LABELS } from '../../lib/activityLabels';
+import { usePersistedFilter, usePersistedMultiFilter, toggleFilterValue } from '../../lib/usePersistedFilter';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'resolved', 'withdrawn'];
 const ROLES = ['user', 'moderator', 'admin'];
@@ -33,56 +34,6 @@ function matchesUserSearch(u, query) {
 }
 
 const MODERATE_SECTIONS = ['reports', 'changes', 'users', 'activity'];
-
-// Keeps a pill selection across page refreshes -- read once on mount from
-// localStorage, written back on every change. Falls back to defaultValue
-// when nothing's stored yet or a stored value no longer matches an
-// allowed option (e.g. after a filter's choices change).
-function usePersistedFilter(key, defaultValue, allowed) {
-  const [value, setValue] = useState(() => {
-    if (typeof window === 'undefined') return defaultValue;
-    const stored = window.localStorage.getItem(key);
-    return stored && allowed.includes(stored) ? stored : defaultValue;
-  });
-  useEffect(() => {
-    window.localStorage.setItem(key, value);
-  }, [key, value]);
-  return [value, setValue];
-}
-
-// Same idea as usePersistedFilter, but for a pill row where more than one
-// option can be active at once. Always holds at least one value --
-// ['all'] means no filtering.
-function usePersistedMultiFilter(key, defaultValue, allowed) {
-  const [value, setValue] = useState(() => {
-    if (typeof window === 'undefined') return defaultValue;
-    try {
-      const stored = JSON.parse(window.localStorage.getItem(key));
-      if (Array.isArray(stored) && stored.length > 0 && stored.every((v) => allowed.includes(v))) {
-        return stored;
-      }
-    } catch {
-      // fall through to default
-    }
-    return defaultValue;
-  });
-  useEffect(() => {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-  return [value, setValue];
-}
-
-// Clicking 'all' resets to just ['all']; clicking any other pill toggles
-// it on/off within the current selection (dropping 'all' first), and
-// falls back to ['all'] if that empties the selection.
-function toggleFilterValue(current, value) {
-  if (value === 'all') return ['all'];
-  const withoutAll = current.filter((v) => v !== 'all');
-  const next = withoutAll.includes(value)
-    ? withoutAll.filter((v) => v !== value)
-    : [...withoutAll, value];
-  return next.length > 0 ? next : ['all'];
-}
 
 function daysPending(submittedAt) {
   return Math.floor((Date.now() - new Date(submittedAt).getTime()) / 86400000);
@@ -992,7 +943,7 @@ function TimelineManager({
               <>
                 <div className="meta">
                   {new Date(ev.created_at).toLocaleString()}
-                  {ev.created_by_email ? ` · ${ev.created_by_email}` : ''}
+                  {(ev.created_by_display_name || ev.created_by_email) ? ` · ${ev.created_by_display_name || ev.created_by_email}` : ''}
                 </div>
                 <p style={{ margin: '0 0 6px' }}>{ev.message}</p>
                 <div className="row">

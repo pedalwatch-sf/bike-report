@@ -49,8 +49,10 @@ lib/                   supabaseClient, useUser/useProfile hooks, and
                         image upload, role levels, SF map center,
                         haversine distance/duplicate radius, HTML
                         escaping, the colored map-pin icon factory,
-                        status label text, and batched reporter-name
-                        lookup
+                        status label text, batched reporter-name lookup,
+                        activity-log action labels, and the persisted
+                        pill/tab filter hooks shared by Browse and
+                        Moderate
   __tests__/             Vitest unit tests for the helpers above
 public/                Static assets -- logo.png (header mark + browser
                         favicon) and logosolid.png
@@ -104,29 +106,36 @@ reports, suggest changes, or register interest.
 
 - **Browse** (`/`) -- map centered on SF with a colored dot per report
   (blue for active, yellow for resolved -- matching those status
-  badges' colors elsewhere), a search box, and Active / Resolved /
-  Following pills, all filtering the same page in place. Following
-  lists every report you've registered interest in, any status, with
-  an "Updated" badge on ones whose status changed or got a new
-  progress-timeline entry since you last opened them, and a small dot
-  on the Following pill itself so you notice without opening it first
-  -- each clears individually once you actually open that report, not
-  all at once. Each report card shows its photo, category, who
-  reported it (links to their profile), interest count, and an "I'm
-  interested" toggle that asks for confirmation before unfollowing.
+  badges' colors elsewhere); tapping a marker's popup links straight to
+  that report. A search box, a collapsible multi-select Category filter
+  (same pill-row pattern as Moderate's account filters), and Active /
+  Resolved / Following pills all filter the same page in place, and
+  combine with each other. Following lists every report you've
+  registered interest in, any status, with an "Updated" badge on ones
+  whose status changed or got a new progress-timeline entry since you
+  last opened them, and a small dot on the Following pill itself so you
+  notice without opening it first -- each clears individually once you
+  actually open that report, not all at once. Each report card shows
+  its photo, category, who reported it (links to their profile),
+  interest count, and an "I'm interested" toggle that asks for
+  confirmation before unfollowing.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
-  for context, alongside your own pin in yellow once you place one.
-  Warns you before submitting if there's already an approved report
-  within ~125m, in case it's a duplicate; you can still submit anyway.
-  A synchronous lock stops a double-click or slow tap from creating
-  two rows. Submitting a report titled exactly "kitten" is a hidden
-  shortcut -- see the easter egg section.
+  for context (its popup links to that report, opening in a new tab so
+  your in-progress draft isn't lost), alongside your own pin in yellow
+  once you place one. Warns you before submitting if there's already an
+  approved report within ~125m, in case it's a duplicate -- a card with
+  links to the nearby report(s) and "Submit anyway" / "Cancel" buttons,
+  not a native browser popup. A synchronous lock stops a double-click or
+  slow tap from creating two rows. Submitting a report titled exactly
+  "kitten" is a hidden shortcut -- see the easter egg section.
 - **Report detail** (`/report/[id]`) -- full photo gallery (horizontal
   scroll for multiple photos, tap any photo for a fullscreen lightbox
-  with next/prev), location, progress timeline, who reported it (links
-  to their profile), an interest-follow toggle, and a "suggest a change"
-  box for signed-in users on active reports.
+  with next/prev), location, progress timeline (each entry shows the
+  poster's display name where available -- their email stays
+  moderator-only), who reported it (links to their profile), an
+  interest-follow toggle, and a "suggest a change" box for signed-in
+  users on active reports.
 - **Impact** (`/impact`) -- public stat tiles (reports submitted, in
   review, active, resolved) pulled from a `get_public_stats()` RPC that
   returns aggregate counts only, so it can include pending/rejected
@@ -175,10 +184,14 @@ reports, suggest changes, or register interest.
   (see "Full audit log for staff activity" below) -- invisible to the
   profile's owner and to plain-user viewers.
 - **Sign in / Create account** (`/login`, `/signup`) -- standard Supabase
-  Auth email/password forms. Sign-up also requires a display name
-  (checked for uniqueness before submitting, and enforced again at the
-  database level) -- see "Unique display names" under Security model.
-  Sign in has a "Forgot password?" link that
+  Auth email/password forms. Sign-up also requires a display name --
+  availability is checked as soon as you leave the field (not just on
+  submit), and enforced again at the database level either way -- see
+  "Unique display names" under Security model. If the confirmation
+  email never shows up, both sign-up (right after creating the account)
+  and sign-in (if it fails because the email isn't confirmed yet) offer
+  a CAPTCHA-protected "Resend confirmation email" button, via Supabase
+  Auth's `resend()`. Sign in also has a "Forgot password?" link that
   emails a reset link (CAPTCHA-protected, same as sign in/up) through
   Supabase Auth's own email delivery; the link lands on `/reset-password`
   to set a new one. See "Password reset setup" under one-time setup
@@ -218,7 +231,9 @@ from `auth.users`, which Moderate flags with an "Unconfirmed" badge)
 own profile / anyone's public profile, single or batched -- the batched
 form resolves reporter display names for a whole page of report cards
 in one round trip, used on Browse and Moderate) · `get_timeline_updates`, `get_all_timeline_updates_for_moderation`
-(progress timeline, with author email masked for non-moderators) ·
+(progress timeline; author email stays masked for non-moderators, but
+display name -- resolved from `updates.created_by`, defaulting to
+`auth.uid()` -- is shown to everyone) ·
 `withdraw_own_report` (self-service withdraw) · `register_interest`,
 `unregister_interest`, `get_my_subscriptions`, `get_report_subscribers`,
 `mark_subscription_seen` (the interest-follow feature, plus the in-app
