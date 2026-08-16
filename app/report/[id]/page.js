@@ -176,7 +176,7 @@ export default function ReportDetailPage({ params }) {
           <div className="card" key={u.id}>
             <div className="meta">
               {new Date(u.created_at).toLocaleString()}
-              {u.created_by_email ? ` · ${u.created_by_email}` : ''}
+              {(u.created_by_display_name || u.created_by_email) ? ` · ${u.created_by_display_name || u.created_by_email}` : ''}
             </div>
             <p style={{ margin: 0 }}>{u.message}</p>
           </div>

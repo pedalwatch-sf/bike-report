@@ -40,6 +40,7 @@ export default function SubmitPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [pendingDuplicates, setPendingDuplicates] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -53,18 +54,21 @@ export default function SubmitPage() {
 
       const { data: approved } = await supabase
         .from('suggestions')
-        .select('title, lat, lng')
+        .select('id, title, lat, lng')
         .eq('status', 'approved');
       (approved || []).forEach((r) => {
         if (r.lat != null && r.lng != null) {
           L.marker([r.lat, r.lng], { icon: dotIcon(L, 'var(--teal)') })
             .addTo(map)
-            .bindPopup(`<b>${escapeHtml(r.title)}</b>`);
+            .bindPopup(
+              `<b>${escapeHtml(r.title)}</b><br/><a href="/report/${r.id}" target="_blank" rel="noopener noreferrer" style="color:var(--teal)">View report →</a>`
+            );
         }
       });
 
       map.on('click', (e) => {
         setCoords(e.latlng);
+        setPendingDuplicates(null);
         if (markerRef.current) map.removeLayer(markerRef.current);
         markerRef.current = L.marker(e.latlng, { icon: dotIcon(L, 'var(--yellow)') }).addTo(map);
       });
@@ -80,7 +84,7 @@ export default function SubmitPage() {
     };
   }, [user]);
 
-  async function handleSubmit() {
+  async function handleSubmit(skipDuplicateCheck = false) {
     // Synchronous guard against double-clicks/taps landing before React
     // re-renders the disabled button -- setSubmitting(true) alone leaves a
     // brief window where a second click can still slip through.
@@ -100,14 +104,14 @@ export default function SubmitPage() {
         return;
       }
 
-      const nearby = await findNearbyReports(coords.lat, coords.lng);
-      if (nearby.length > 0) {
-        const names = nearby.map((r) => `"${r.title}"`).join(', ');
-        const proceed = window.confirm(
-          `This looks close to an existing report: ${names}. Submit anyway as a possible duplicate?`
-        );
-        if (!proceed) return;
+      if (!skipDuplicateCheck) {
+        const nearby = await findNearbyReports(coords.lat, coords.lng);
+        if (nearby.length > 0) {
+          setPendingDuplicates(nearby);
+          return;
+        }
       }
+      setPendingDuplicates(null);
 
       setSubmitting(true);
       setMessage('');
@@ -243,11 +247,36 @@ export default function SubmitPage() {
           {coords ? `Pin set: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : 'No pin placed yet'}
         </div>
 
-        <div style={{ marginTop: 18 }}>
-          <button className="btn" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Submitting…' : 'Submit for review'}
-          </button>
-        </div>
+        {pendingDuplicates && (
+          <div className="card" style={{ marginTop: 18, borderColor: 'var(--coral)' }}>
+            <h3>This might already be reported</h3>
+            <p>
+              This looks close to {pendingDuplicates.length === 1 ? 'an existing report' : 'existing reports'}:
+            </p>
+            {pendingDuplicates.map((r) => (
+              <p key={r.id} style={{ margin: '0 0 6px' }}>
+                <a href={`/report/${r.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--teal)' }}>
+                  {r.title} →
+                </a>
+              </p>
+            ))}
+            <div className="row" style={{ marginTop: 10 }}>
+              <button className="btn" onClick={() => handleSubmit(true)} disabled={submitting}>
+                {submitting ? 'Submitting…' : 'Submit anyway'}
+              </button>
+              <button className="btn outline" onClick={() => setPendingDuplicates(null)} disabled={submitting}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {!pendingDuplicates && (
+          <div style={{ marginTop: 18 }}>
+            <button className="btn" onClick={() => handleSubmit()} disabled={submitting}>
+              {submitting ? 'Submitting…' : 'Submit for review'}
+            </button>
+          </div>
+        )}
         {message && (
           <p className="hint" style={{ marginTop: 10 }}>
             {message}

@@ -9,22 +9,13 @@ import { SF_CENTER } from '../lib/constants';
 import { escapeHtml } from '../lib/escapeHtml';
 import { dotIcon } from '../lib/leafletDotIcon';
 import { attachReporterNames } from '../lib/reporterNames';
+import { CATEGORIES } from '../lib/categories';
+import { usePersistedFilter, usePersistedMultiFilter, toggleFilterValue } from '../lib/usePersistedFilter';
 
 const VIEWS = ['active', 'resolved', 'following'];
-
-// Keeps the Active/Resolved/Following pill selection across page
-// refreshes -- read once on mount from localStorage, written back on
-// every change.
-function usePersistedView() {
-  const [value, setValue] = useState(() => {
-    if (typeof window === 'undefined') return 'active';
-    const stored = window.localStorage.getItem('browse-view');
-    return stored && VIEWS.includes(stored) ? stored : 'active';
-  });
-  useEffect(() => {
-    window.localStorage.setItem('browse-view', value);
-  }, [value]);
-  return [value, setValue];
+const CATEGORY_FILTERS = ['all', ...CATEGORIES];
+function matchesCategoryFilters(report, filters) {
+  return filters.includes('all') || filters.includes(report.category);
 }
 
 export default function BrowsePage() {
@@ -32,7 +23,9 @@ export default function BrowsePage() {
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [search, setSearch] = useState('');
-  const [view, setView] = usePersistedView();
+  const [view, setView] = usePersistedFilter('browse-view', 'active', VIEWS);
+  const [categoryFilters, setCategoryFilters] = usePersistedMultiFilter('browse-category-filters', ['all'], CATEGORY_FILTERS);
+  const [categoryFiltersOpen, setCategoryFiltersOpen] = useState(() => !categoryFilters.includes('all'));
   const [myInterests, setMyInterests] = useState(new Set());
   const [followingReports, setFollowingReports] = useState(undefined);
   const [updatedIds, setUpdatedIds] = useState(new Set());
@@ -131,16 +124,22 @@ export default function BrowsePage() {
         const color = s.status === 'resolved' ? 'var(--yellow)' : 'var(--teal)';
         L.marker([s.lat, s.lng], { icon: dotIcon(L, color) })
           .addTo(map)
-          .bindPopup(`<b>${escapeHtml(s.title)}</b>`);
+          .bindPopup(
+            `<b>${escapeHtml(s.title)}</b><br/><a href="/report/${s.id}" style="color:var(--teal)">View report →</a>`
+          );
       }
     });
     mapInstance.current = map;
   }
 
-  const filtered = suggestions.filter((s) => matchesSearch(s, search));
+  const filtered = suggestions
+    .filter((s) => matchesSearch(s, search))
+    .filter((s) => matchesCategoryFilters(s, categoryFilters));
   const active = filtered.filter((s) => s.status === 'approved');
   const resolved = filtered.filter((s) => s.status === 'resolved');
   const visible = view === 'active' ? active : resolved;
+  const visibleFollowing = (followingReports || []).filter((r) => matchesCategoryFilters(r, categoryFilters));
+  const activeCategoryFilterCount = categoryFilters.includes('all') ? 0 : categoryFilters.length;
 
   return (
     <main>
@@ -154,8 +153,38 @@ export default function BrowsePage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search reports by title, description, or category…"
-          style={{ marginBottom: 14 }}
         />
+        <div className="row" style={{ margin: '10px 0' }}>
+          <button
+            type="button"
+            className={`filter-btn ${categoryFiltersOpen ? 'active' : ''}`}
+            onClick={() => setCategoryFiltersOpen((v) => !v)}
+          >
+            Category{activeCategoryFilterCount > 0 && ` (${activeCategoryFilterCount})`}
+          </button>
+          {activeCategoryFilterCount > 0 && (
+            <button type="button" className="btn outline" onClick={() => setCategoryFilters(['all'])}>
+              Clear
+            </button>
+          )}
+        </div>
+        {categoryFiltersOpen && (
+          <div className="card">
+            <label>Category</label>
+            <div className="filter-row">
+              {CATEGORY_FILTERS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={`filter-btn ${categoryFilters.includes(c) ? 'active' : ''}`}
+                  onClick={() => setCategoryFilters((prev) => toggleFilterValue(prev, c))}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="filter-row">
           <button className={`filter-btn ${view === 'active' ? 'active' : ''}`} onClick={() => setView('active')}>
             Active ({active.length})
@@ -164,7 +193,7 @@ export default function BrowsePage() {
             Resolved ({resolved.length})
           </button>
           <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} onClick={() => setView('following')}>
-            Following{Array.isArray(followingReports) ? ` (${followingReports.length})` : ''}
+            Following{Array.isArray(followingReports) ? ` (${visibleFollowing.length})` : ''}
             {updatedIds.size > 0 && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
           </button>
         </div>
@@ -188,8 +217,11 @@ export default function BrowsePage() {
                 Tap &quot;I&apos;m interested&quot; on a report to get updates here.
               </div>
             )}
+            {user && Array.isArray(followingReports) && followingReports.length > 0 && visibleFollowing.length === 0 && (
+              <div className="empty">No followed reports match this category filter.</div>
+            )}
             {user &&
-              (followingReports || []).map((r) => (
+              visibleFollowing.map((r) => (
                 <ReportCard
                   key={r.id}
                   report={r}
