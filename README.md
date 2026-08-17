@@ -123,10 +123,12 @@ reports, suggest changes, or register interest.
 - **Browse** (`/`) -- map centered on SF with a colored dot per report
   (blue for active, yellow for resolved -- matching those status
   badges' colors elsewhere); tapping a marker's popup links straight to
-  that report. A search box, a collapsible multi-select Category filter
-  (same pill-row pattern as Moderate's account filters), and Active /
-  Resolved / Following pills all filter the same page in place, and
-  combine with each other. Following lists every report you've
+  that report. A search box, then one pill row for Active / Resolved /
+  Following plus a Category toggle at the end of the same row; tapping
+  Category drops down a multi-select pill panel below (same pattern as
+  Moderate's account filters) instead of stacking a second permanent
+  pill row. All of it filters the same page in place and combines
+  together. Following lists every report you've
   registered interest in, any status, with an "Updated" badge on ones
   whose status changed or got a new progress-timeline entry since you
   last opened them, and a small dot on the Following pill itself so you
