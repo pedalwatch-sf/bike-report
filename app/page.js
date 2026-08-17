@@ -158,7 +158,17 @@ export default function BrowsePage() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search reports by title, description, or category…"
         />
-        <div className="row" style={{ margin: '10px 0' }}>
+        <div className="filter-row">
+          <button className={`filter-btn ${view === 'active' ? 'active' : ''}`} onClick={() => setView('active')}>
+            Active ({active.length})
+          </button>
+          <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} onClick={() => setView('resolved')}>
+            Resolved ({resolved.length})
+          </button>
+          <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} onClick={() => setView('following')}>
+            Following{Array.isArray(followingReports) ? ` (${visibleFollowing.length})` : ''}
+            {updatedIds.size > 0 && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
+          </button>
           <button
             type="button"
             className={`filter-btn ${categoryFiltersOpen ? 'active' : ''}`}
@@ -166,16 +176,18 @@ export default function BrowsePage() {
           >
             Category{activeCategoryFilterCount > 0 && ` (${activeCategoryFilterCount})`}
           </button>
-          {activeCategoryFilterCount > 0 && (
-            <button type="button" className="btn outline" onClick={() => setCategoryFilters(['all'])}>
-              Clear
-            </button>
-          )}
         </div>
         {categoryFiltersOpen && (
           <div className="card">
-            <label>Category</label>
-            <div className="filter-row">
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <label style={{ margin: 0 }}>Category</label>
+              {activeCategoryFilterCount > 0 && (
+                <button type="button" className="btn outline" onClick={() => setCategoryFilters(['all'])}>
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="filter-row" style={{ marginTop: 10 }}>
               {CATEGORY_FILTERS.map((c) => (
                 <button
                   key={c}
@@ -189,18 +201,6 @@ export default function BrowsePage() {
             </div>
           </div>
         )}
-        <div className="filter-row">
-          <button className={`filter-btn ${view === 'active' ? 'active' : ''}`} onClick={() => setView('active')}>
-            Active ({active.length})
-          </button>
-          <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} onClick={() => setView('resolved')}>
-            Resolved ({resolved.length})
-          </button>
-          <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} onClick={() => setView('following')}>
-            Following{Array.isArray(followingReports) ? ` (${visibleFollowing.length})` : ''}
-            {updatedIds.size > 0 && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
-          </button>
-        </div>
 
         {view === 'following' ? (
           <>
