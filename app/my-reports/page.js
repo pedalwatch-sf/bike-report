@@ -1,30 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import ImageGallery from '../../components/ImageGallery';
 import LoadMoreButton from '../../components/LoadMoreButton';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
-import { usePagination } from '../../lib/usePagination';
+import { useReportFeed } from '../../lib/useReportFeed';
 
 export default function MyReportsPage() {
   const user = useUser();
-  const [reports, setReports] = useState(undefined);
   const [message, setMessage] = useState('');
-  const page = usePagination(reports || [], 'my-reports');
-
-  useEffect(() => {
-    if (user) loadReports();
-  }, [user]);
-
-  async function loadReports() {
-    const { data } = await supabase
-      .from('suggestions')
-      .select('*, report_images(id, url)')
-      .eq('user_id', user.id)
-      .order('submitted_at', { ascending: false });
-    setReports(data || []);
-  }
+  const reportsFeed = useReportFeed(
+    {
+      userId: user?.id,
+      enabled: Boolean(user),
+      attachNames: false,
+    },
+    `my-reports|${user?.id || 'signed-out'}`
+  );
 
   async function withdraw(id) {
     if (!window.confirm('Withdraw this submission? A moderator will still be able to see it.')) return;
@@ -34,10 +27,10 @@ export default function MyReportsPage() {
       setMessage(error.message);
       return;
     }
-    loadReports();
+    reportsFeed.reload();
   }
 
-  if (user === undefined || (user && reports === undefined)) {
+  if (user === undefined || (user && reportsFeed.loading && reportsFeed.items.length === 0)) {
     return (
       <main>
         <div className="content"><p className="hint">Loading…</p></div>
@@ -67,26 +60,40 @@ export default function MyReportsPage() {
       <div className="content">
         <p className="eyebrow">My submissions</p>
         {message && <p className="hint">{message}</p>}
-        {reports.length === 0 && <div className="empty">You haven&apos;t submitted any reports yet.</div>}
-        {page.visible.map((r) => (
-          <div className="card" key={r.id}>
-            <ImageGallery images={r.report_images} />
-            <span className={`badge ${r.status}`}>{r.status}</span>
-            <span className="badge cat">{r.category}</span>
-            <h3>{r.title}</h3>
-            <p>{r.description}</p>
-            <div className="meta">Submitted {new Date(r.submitted_at).toLocaleDateString()}</div>
+        {reportsFeed.error && (
+          <div className="card" role="alert">
+            <h3>Couldn&apos;t load your reports</h3>
+            <p>The request failed. Check your connection and try again.</p>
+            <button type="button" className="btn outline" onClick={reportsFeed.reload}>Try again</button>
+          </div>
+        )}
+        {!reportsFeed.loading && !reportsFeed.error && reportsFeed.total === 0 && (
+          <div className="empty">You haven&apos;t submitted any reports yet.</div>
+        )}
+        {reportsFeed.items.map((report) => (
+          <div className="card" key={report.id}>
+            <ImageGallery images={report.report_images} />
+            <span className={`badge ${report.status}`}>{report.status}</span>
+            <span className="badge cat">{report.category}</span>
+            <h3>{report.title}</h3>
+            <p>{report.description}</p>
+            <div className="meta">Submitted {new Date(report.submitted_at).toLocaleDateString()}</div>
             <div className="row" style={{ marginTop: 8 }}>
-              <a className="btn outline" href={`/report/${r.id}`}>View report</a>
-              {r.status !== 'withdrawn' && (
-                <button className="btn coral" style={{ marginLeft: 'auto' }} onClick={() => withdraw(r.id)}>
+              <a className="btn outline" href={`/report/${report.id}`}>View report</a>
+              {report.status !== 'withdrawn' && (
+                <button className="btn coral" style={{ marginLeft: 'auto' }} onClick={() => withdraw(report.id)}>
                   Withdraw
                 </button>
               )}
             </div>
           </div>
         ))}
-        <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
+        <LoadMoreButton
+          hasMore={reportsFeed.hasMore}
+          remaining={reportsFeed.total - reportsFeed.items.length}
+          onClick={reportsFeed.loadMore}
+          loading={reportsFeed.loading}
+        />
       </div>
     </main>
   );

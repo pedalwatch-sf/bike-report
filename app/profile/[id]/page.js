@@ -8,21 +8,28 @@ import { useUser } from '../../../lib/useUser';
 import { isModOrAdmin } from '../../../lib/roles';
 import { ACTIVITY_LABELS } from '../../../lib/activityLabels';
 import { usePagination } from '../../../lib/usePagination';
+import { useReportFeed } from '../../../lib/useReportFeed';
 
 export default function ProfilePage(props) {
   const params = use(props.params);
   const { id } = params;
   const viewer = useUser();
 
-  const [profile, setProfile] = useState(undefined); // undefined = loading, null = not found
-  const [reports, setReports] = useState([]);
+  const [profile, setProfile] = useState(undefined);
   const [myInterests, setMyInterests] = useState(new Set());
   const [viewerIsModOrAdmin, setViewerIsModOrAdmin] = useState(false);
   const [activityLog, setActivityLog] = useState([]);
 
+  const reportsFeed = useReportFeed(
+    {
+      statuses: ['approved', 'resolved'],
+      userId: id,
+    },
+    `profile-reports|${id}`
+  );
+
   useEffect(() => {
     loadProfile();
-    loadReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -40,7 +47,7 @@ export default function ProfilePage(props) {
 
   async function loadMyInterests() {
     const { data } = await supabase.rpc('get_my_subscriptions');
-    setMyInterests(new Set((data || []).map((r) => r.suggestion_id)));
+    setMyInterests(new Set((data || []).map((row) => row.suggestion_id)));
   }
 
   async function loadViewerRole() {
@@ -64,17 +71,6 @@ export default function ProfilePage(props) {
     setProfile(data?.[0] || null);
   }
 
-  async function loadReports() {
-    const { data } = await supabase
-      .from('suggestions')
-      .select('*, subscribers(count), report_images(url)')
-      .eq('user_id', id)
-      .in('status', ['approved', 'resolved'])
-      .order('submitted_at', { ascending: false });
-    setReports(data || []);
-  }
-
-  const reportsPage = usePagination(reports, `reports|${id}`);
   const activityPage = usePagination(activityLog, `activity|${id}`);
 
   if (profile === undefined) {
@@ -104,16 +100,27 @@ export default function ProfilePage(props) {
         </div>
 
         <p className="hint" style={{ margin: '18px 0 10px' }}>
-          Contributions {reports.length > 0 && `(${reports.length})`}
+          Contributions {reportsFeed.total > 0 && `(${reportsFeed.total})`}
         </p>
-        {reports.length === 0 && <div className="empty">No public reports yet.</div>}
-        {reportsPage.visible.map((s) => (
-          <ReportCard key={s.id} report={s} following={myInterests.has(s.id)} />
+        {reportsFeed.error && (
+          <div className="card" role="alert">
+            <h3>Couldn&apos;t load contributions</h3>
+            <p>The request failed. Check your connection and try again.</p>
+            <button type="button" className="btn outline" onClick={reportsFeed.reload}>Try again</button>
+          </div>
+        )}
+        {reportsFeed.loading && reportsFeed.items.length === 0 && <p className="hint">Loading…</p>}
+        {!reportsFeed.loading && !reportsFeed.error && reportsFeed.total === 0 && (
+          <div className="empty">No public reports yet.</div>
+        )}
+        {reportsFeed.items.map((report) => (
+          <ReportCard key={report.id} report={report} following={myInterests.has(report.id)} />
         ))}
         <LoadMoreButton
-          hasMore={reportsPage.hasMore}
-          remaining={reportsPage.total - reportsPage.visible.length}
-          onClick={reportsPage.loadMore}
+          hasMore={reportsFeed.hasMore}
+          remaining={reportsFeed.total - reportsFeed.items.length}
+          onClick={reportsFeed.loadMore}
+          loading={reportsFeed.loading}
         />
 
         {viewerIsModOrAdmin && (
