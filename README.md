@@ -55,11 +55,12 @@ lib/                   supabaseClient, useUser/useProfile hooks, and
                         status label text, batched reporter-name lookup,
                         activity-log action labels, the persisted
                         pill/tab filter hooks shared by Browse and
-                        Moderate, and usePagination (client-side "Load
-                        more" pagination, used everywhere a list can
-                        grow -- Browse, all four Moderate tabs, My
-                        submissions, a profile's reports/activity, and a
-                        report's progress timeline)
+                        Moderate, useReportFeed (cursor-based database
+                        pagination for public/personal report feeds), and
+                        usePagination (render pagination retained for
+                        staff lists that intentionally load a complete
+                        dataset for filtering, duplicate checks, or CSV
+                        export)
   __tests__/             Vitest unit tests for pure helpers
 public/                Static assets -- logo.png (header mark + browser
                         favicon) and logosolid.png
@@ -139,9 +140,10 @@ reports, suggest changes, or register interest.
   actually open that report, not all at once. Each report card shows
   its photo, category, who reported it (links to their profile),
   interest count, and an "I'm interested" toggle that asks for
-  confirmation before unfollowing. Cards load 20 at a time with a "Load
-  more" button, same as every list of unbounded size in this app (see
-  `usePagination` under `lib/` above).
+  confirmation before unfollowing. Active, resolved, and followed
+  reports load from Postgres in cursor-based pages of 20; search and
+  category filters run in the database before paging, so later matches
+  are never hidden behind an unloaded client-side slice.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
   for context (its popup links to that report, opening in a new tab so
@@ -280,6 +282,9 @@ sign-up, before the uniqueness check that actually matters -- the
 database-level unique index -- ever runs) · `get_public_stats`
 (aggregate-only counts for `/impact`; intentionally has no
 authorization check since it never returns row content) ·
+`get_report_page` (RLS-preserving cursor pagination for Browse,
+Following, My submissions, and public profile contributions, including
+server-side search/category filtering and batched image/subscriber data) ·
 `log_activity`, `get_activity_log`, `get_user_activity_log` (the audit
 log behind Moderate's Activity tab and a moderator-only section on
 public profiles -- see "Full audit log for staff activity" under
