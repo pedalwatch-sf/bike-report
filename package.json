@@ -6,20 +6,25 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint .",
     "test": "vitest run"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.0",
     "@supabase/supabase-js": "2.112.3",
     "leaflet": "1.9.4",
-    "next": "14.2.35",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "overrides": {
     "postcss": "8.5.26"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.3",
+    "jsdom": "^30.0.1",
     "vitest": "^4.1.10"
   }
 }

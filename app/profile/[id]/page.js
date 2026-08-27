@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import ReportCard from '../../../components/ReportCard';
 import LoadMoreButton from '../../../components/LoadMoreButton';
 import { supabase } from '../../../lib/supabaseClient';
@@ -9,7 +9,8 @@ import { isModOrAdmin } from '../../../lib/roles';
 import { ACTIVITY_LABELS } from '../../../lib/activityLabels';
 import { usePagination } from '../../../lib/usePagination';
 
-export default function ProfilePage({ params }) {
+export default function ProfilePage(props) {
+  const params = use(props.params);
   const { id } = params;
   const viewer = useUser();
 

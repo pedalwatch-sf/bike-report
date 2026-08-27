@@ -1,2 +1,4 @@
 node_modules/
 .next/
+# Generated only when the Next docs are not bundled in node_modules.
+.next-docs/

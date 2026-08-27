@@ -5,7 +5,7 @@ import ReportCard from '../components/ReportCard';
 import LoadMoreButton from '../components/LoadMoreButton';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
-import { matchesSearch } from '../lib/searchReports';
+import { filterReports } from '../lib/searchReports';
 import { SF_CENTER } from '../lib/constants';
 import { escapeHtml } from '../lib/escapeHtml';
 import { dotIcon } from '../lib/leafletDotIcon';
@@ -16,9 +16,6 @@ import { usePagination } from '../lib/usePagination';
 
 const VIEWS = ['active', 'resolved', 'following'];
 const CATEGORY_FILTERS = ['all', ...CATEGORIES];
-function matchesCategoryFilters(report, filters) {
-  return filters.includes('all') || filters.includes(report.category);
-}
 
 export default function BrowsePage() {
   const user = useUser();
@@ -134,13 +131,11 @@ export default function BrowsePage() {
     mapInstance.current = map;
   }
 
-  const filtered = suggestions
-    .filter((s) => matchesSearch(s, search))
-    .filter((s) => matchesCategoryFilters(s, categoryFilters));
+  const filtered = filterReports(suggestions, search, categoryFilters);
   const active = filtered.filter((s) => s.status === 'approved');
   const resolved = filtered.filter((s) => s.status === 'resolved');
   const visible = view === 'active' ? active : resolved;
-  const visibleFollowing = (followingReports || []).filter((r) => matchesCategoryFilters(r, categoryFilters));
+  const visibleFollowing = filterReports(followingReports || [], search, categoryFilters);
   const activeCategoryFilterCount = categoryFilters.includes('all') ? 0 : categoryFilters.length;
   const currentList = view === 'following' ? visibleFollowing : visible;
   const page = usePagination(currentList, `${view}|${search}|${categoryFilters.join(',')}`);
@@ -222,7 +217,7 @@ export default function BrowsePage() {
               </div>
             )}
             {user && Array.isArray(followingReports) && followingReports.length > 0 && visibleFollowing.length === 0 && (
-              <div className="empty">No followed reports match this category filter.</div>
+              <div className="empty">No followed reports match your search or category filters.</div>
             )}
             {user &&
               page.visible.map((r) => (
