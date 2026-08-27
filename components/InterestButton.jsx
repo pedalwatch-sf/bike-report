@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
 
@@ -10,6 +10,11 @@ export default function InterestButton({ suggestionId, count, following: initial
   const [localCount, setLocalCount] = useState(count);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setFollowing(!!initiallyFollowing);
+    setLocalCount(count);
+  }, [suggestionId, initiallyFollowing, count]);
 
   async function toggle() {
     if (following && !window.confirm('Stop following this report? You will no longer get updates about it.')) return;
@@ -22,9 +27,10 @@ export default function InterestButton({ suggestionId, count, following: initial
       setError('Something went wrong — try again.');
       return;
     }
-    setFollowing(!following);
-    setLocalCount((c) => c + (following ? -1 : 1));
-    onChange?.(!following);
+    const nowFollowing = !following;
+    setFollowing(nowFollowing);
+    setLocalCount((c) => c + (nowFollowing ? 1 : -1));
+    onChange?.(nowFollowing);
   }
 
   if (!user) {

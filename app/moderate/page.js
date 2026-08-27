@@ -369,31 +369,6 @@ export default function ModeratePage() {
     if (!error) loadProfile();
   }
 
-  if (user === undefined) {
-    return (
-      <main>
-        <div className="content"><p className="hint">Loading…</p></div>
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main>
-        <div className="content">
-          <div className="lock">
-            <h3>Moderator access</h3>
-            <p className="hint">Sign in to request or use moderator access.</p>
-            <div className="row" style={{ justifyContent: 'center', marginTop: 14 }}>
-              <a className="btn" href="/login">Sign in</a>
-              <a className="btn outline" href="/signup">Create account</a>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   const isModOrAdmin = profile && roleLevel(profile.role) >= 2;
   const isAdmin = profile && roleLevel(profile.role) >= 3;
   const visibleReports = reports
@@ -419,6 +394,32 @@ export default function ModeratePage() {
   );
   const changesPage = usePagination(changeSuggestions, 'changes');
   const activityPage = usePagination(activityLog, 'activity');
+
+  if (user === undefined) {
+    return (
+      <main>
+        <div className="content"><p className="hint">Loading…</p></div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main>
+        <div className="content">
+          <div className="lock">
+            <h3>Moderator access</h3>
+            <p className="hint">Sign in to request or use moderator access.</p>
+            <div className="row" style={{ justifyContent: 'center', marginTop: 14 }}>
+              <a className="btn" href="/login">Sign in</a>
+              <a className="btn outline" href="/signup">Create account</a>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const pendingClusters = {};
   const pendingReports = reports.filter((r) => r.status === 'pending' && r.lat != null && r.lng != null);
   const approvedReports = reports.filter((r) => r.status === 'approved' && r.lat != null && r.lng != null);

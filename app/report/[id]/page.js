@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import InterestButton from '../../../components/InterestButton';
@@ -15,7 +15,8 @@ import { usePagination } from '../../../lib/usePagination';
 
 const ACTIVE_STATUSES = ['approved', 'resolved'];
 
-export default function ReportDetailPage({ params }) {
+export default function ReportDetailPage(props) {
+  const params = use(props.params);
   const { id } = params;
   const { user, profile } = useProfile();
   const router = useRouter();
