@@ -19,9 +19,12 @@ export default function ImpactPage() {
     <main>
       <div className="content">
         <p className="eyebrow">Community impact</p>
+        <h1>From report to resolution</h1>
         <p className="hint">
-          Every number below started as someone in the community flagging a
-          problem. Here&apos;s where things stand.
+          PedalWatch helps people document damaged or unsafe bike infrastructure
+          across San Francisco and follow each issue through review and resolution.
+          These totals show what the community has reported and where those reports
+          currently stand.
         </p>
 
         {stats === undefined && <p className="hint">Loading…</p>}
