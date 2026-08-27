@@ -1,20 +1,20 @@
-# Route Report
+# Project PedalWatch
 
-Your bike infrastructure tracker for SF. People flag bike lanes, crossings,
-racks, and signage that need attention; you and your moderators review and
-track them through to resolution. Backed by Supabase for the database,
-image storage, and user accounts, and deployed on Vercel.
+A bike infrastructure tracker for San Francisco. People flag bike lanes, crossings,
+racks, and signage that need attention; moderators review and track reports through
+to resolution. Backed by Supabase for the database, image storage, and user accounts,
+and deployed on Vercel.
 
 ## Tech stack
 
-- **Next.js 14** (App Router) with React 18, all client components (`'use client'`)
+- **Next.js 16.3.3** (App Router) with **React 19.2.8**, with the app UI implemented as client components (`'use client'`)
 - **Supabase** for Postgres, Auth, and Storage -- no separate backend server
 - **Leaflet** (loaded via CDN stylesheet + npm package) for every map: Browse,
-  Submit, and the location editor in Moderate
-- **Vitest** for unit tests on the pure `lib/` helpers (`npm test`), run
-  automatically on every push/PR via GitHub Actions (`.github/workflows/ci.yml`,
-  alongside `npm run build` and `npm audit --audit-level=critical`) --
-  the `main` branch requires this check to pass before a PR can merge
+  Submit, report detail, and the location editor in Moderate
+- **Vitest** plus **Testing Library** for helper/component regression tests (`npm test`), run
+  automatically on every push/PR via GitHub Actions (`.github/workflows/ci.yml`),
+  alongside `npm run lint`, `npm run build`, and `npm audit --audit-level=high`
+  on Node 22
 - Plain CSS in `app/globals.css` (no CSS framework), dark theme, custom
   properties for color/radius/shadow tokens. The two accent colors are
   `--yellow` (`#f3af49`) and `--teal` (`#5982c0`, a complementary blue
@@ -31,7 +31,7 @@ app/                  Next.js App Router pages (one folder per route)
   page.js               Browse ("/")
   submit/               Submit a report
   report/[id]/           Report detail + suggest-a-change
-  moderate/              Reports / Suggested changes / User accounts tabs
+  moderate/              Reports / Suggested changes / User accounts / Activity
   account/               Your own account settings
   my-reports/            Everything you've submitted
   profile/[id]/           Anyone's public reporting history
@@ -46,6 +46,7 @@ components/            Shared UI: Header, Nav (shows a red dot on the
                         root layout, hidden on /kitten, instead of each
                         page rendering its own copy -- keeps the logo
                         from flashing on every client-side navigation)
+  __tests__/             Component regression tests
 lib/                   supabaseClient, useUser/useProfile hooks, and
                         small helpers -- category list, search matching,
                         image upload, role levels, SF map center,
@@ -59,11 +60,11 @@ lib/                   supabaseClient, useUser/useProfile hooks, and
                         grow -- Browse, all four Moderate tabs, My
                         submissions, a profile's reports/activity, and a
                         report's progress timeline)
-  __tests__/             Vitest unit tests for the helpers above
+  __tests__/             Vitest unit tests for pure helpers
 public/                Static assets -- logo.png (header mark + browser
                         favicon) and logosolid.png
 supabase/migrations/   Full schema history, see "Database schema" below
-.github/workflows/     CI -- build + test on every push/PR
+.github/workflows/     CI -- lint + build + test + high-severity dependency audit
 ```
 
 ## How access works
@@ -107,13 +108,15 @@ full row data, refetched on every navigation so it clears shortly after
 you resolve whatever it was flagging. Inside Moderate itself, the
 Reports and User accounts section tabs carry their own matching dots
 (Suggested changes already shows a count instead).
-- **Owner** (that's you) sits above admin -- it can manage admin accounts
-  too, which regular admins can't do to each other. It's not a role
-  anyone can grant through the UI; see "Making yourself the owner" below.
+- **Owner** sits above admin -- it can manage admin accounts too, which
+  regular admins can't do to each other. It's not a role anyone can grant
+  through the UI; see "Make yourself the owner" below.
 
-Permissions are enforced by Supabase Row Level Security directly on the
-database, based on who's signed in and their role -- there's no shared
-passcode and nothing secret sitting in the code.
+Permissions are enforced by a combination of Supabase table grants and Row Level
+Security, narrowly authorized `SECURITY DEFINER` RPCs, and a PostgREST pre-request
+hook that enforces MFA and network rate limits before Data API requests reach the
+underlying table/function. There is no shared moderation passcode and no private
+server key shipped to the browser.
 
 A banned account can still sign in and browse, but can't submit new
 reports, suggest changes, or register interest.
@@ -240,10 +243,14 @@ Seven tables in the `public` schema, all with Row Level Security enabled:
 | `subscriber_identities` | The actual email/account behind each `subscribers` row -- fully locked down, moderator-only access via a function |
 
 Most reads and writes go through direct table queries governed by RLS.
-A handful of operations that need to check something beyond simple
-row ownership (role hierarchy, masking a column for some viewers,
-looking up another user by id) go through `SECURITY DEFINER` Postgres
-functions instead, each doing its own authorization check internally:
+Operations that need to check something beyond simple row ownership (role
+hierarchy, masking a column for some viewers, looking up another user by id)
+go through narrow `SECURITY DEFINER` Postgres functions that perform their own
+authorization checks. API execution grants are also explicit: privileged RPCs
+are authenticated-only, intentionally public read-only RPCs are available to
+`anon`/`authenticated`, and internal trigger/audit helpers have no API-role
+execute grant. MFA is enforced before authenticated PostgREST requests by
+`public.check_request()`, so these RPCs do not create an MFA bypass.
 
 `is_admin`, `is_moderator_or_admin`, `is_banned`, `is_owner`, `role_level`
 (internal helpers) · `admin_set_user_role`, `admin_review_moderator_request`,
@@ -302,10 +309,11 @@ afterward, so the repo always shows what's actually running.
   is an anon-callable pre-check the sign-up form calls before submitting,
   purely for a fast, clear error message -- the index is what actually
   prevents a race between two simultaneous sign-ups with the same name.
-- **RLS is the real security boundary**, not the API key. `lib/supabaseClient.js`
+- **RLS is a primary security boundary, not the API key.** `lib/supabaseClient.js`
   hardcodes the project URL and anon key client-side on purpose -- Supabase's
-  anon key is meant to be public; what it's allowed to do is entirely
-  controlled by RLS policies and table grants on the database side.
+  anon key is meant to be public; what it can do is constrained by table grants,
+  RLS policies, explicit RPC execute grants, and authorization inside privileged
+  functions.
 - **Column-level grants** hide specific sensitive columns from otherwise-public
   tables where a plain row policy can't (Postgres RLS filters rows, not
   columns). `subscribers` is deliberately split from `subscriber_identities`
@@ -319,24 +327,23 @@ afterward, so the repo always shows what's actually running.
   rewrite their own `role` column, not just their display name -- so
   display name, ban status, and role changes each go through a function
   that touches only that one column and checks the caller's authorization
-  itself.
+  itself. Internal trigger/audit helpers are explicitly revoked from API roles,
+  while privileged user-facing RPCs are executable only by `authenticated`.
 - **Role hierarchy checks are relative, not hardcoded.** Authorization
   checks compare `role_level(caller) vs role_level(target)` rather than
   matching literal role strings, so adding the `owner` role above `admin`
   didn't require touching most of the authorization logic.
-- **Optional TOTP two-factor authentication**, enforced at the database,
+- **Optional TOTP two-factor authentication**, enforced across the Data API,
   not just the login screen. Any account can turn on 2FA from `/account`
-  (Supabase's built-in TOTP MFA -- scan a QR code with an authenticator
-  app or Apple Passwords). A restrictive RLS policy on every table
-  requires an `aal2` session (i.e. the login's second factor was actually
-  verified) for any account that has a verified factor enrolled, via a
-  `SECURITY DEFINER` helper (`user_has_verified_mfa`) rather than
-  granting the `authenticated` role direct access to `auth.mfa_factors`,
-  which holds the actual TOTP secrets. Accounts that haven't enrolled are
-  completely unaffected. This only covers RLS-governed direct table
-  access -- the privileged `SECURITY DEFINER` RPCs listed above bypass
-  RLS by design (same as everywhere else in this app) and don't
-  currently re-check `aal` themselves.
+  (Supabase's built-in TOTP MFA -- scan a QR code with an authenticator app
+  or Apple Passwords). `public.check_request()` runs as PostgREST's pre-request
+  hook and rejects an authenticated request when the account has a verified MFA
+  factor but the JWT assurance level is not `aal2`. That happens before direct
+  table access or `SECURITY DEFINER` RPC execution, closing the earlier RPC
+  bypass. Restrictive RLS policies still require `aal2` on tables as
+  defense-in-depth. `user_has_verified_mfa` can only reveal enrollment for the
+  current authenticated user; API roles are not granted direct access to
+  `auth.mfa_factors`, which contains the TOTP factor data.
 - **Abuse protection on submissions and uploads.** The `submission-images`
   storage bucket only accepts uploads from signed-in, non-banned accounts
   (`to authenticated`, checked against `is_banned`), capped at 10MB and
@@ -347,7 +354,7 @@ afterward, so the repo always shows what's actually running.
   without affecting a real person submitting several genuine reports.
   A per-account limit alone is easy to route around by creating more
   accounts, so there's also a per-IP limit (20/hour on the same two
-  write paths) via a PostgREST `pre-request` function
+  write paths) in the same PostgREST pre-request function used for MFA
   (`public.check_request`, registered on the `authenticator` role) --
   the IP comes from `X-Forwarded-For`, which Supabase's edge proxy sets
   itself from the real connection, not something a client can spoof by
@@ -391,9 +398,9 @@ build locally the same way.
 
 ## Deploying an update
 
-Since this is already on GitHub and connected to Vercel: update the file(s)
-on GitHub (via the pencil-edit icon, or by uploading a replacement file)
-and commit. Vercel redeploys automatically within a minute or two.
+The repository is connected to Vercel. Changes merged to `main` trigger the
+connected deployment automatically; application code does not need a separate
+manual upload step.
 
 ## One-time setup steps
 
@@ -412,8 +419,8 @@ owner -- someone has to be the first one, manually:
 
 1. Go to your live site and create an account (Sign in -> Create account)
    using the email you want to administer with
-2. Tell Claude that email address, and it'll grant that account the
-   `owner` role directly in the database
+2. Use trusted database/admin tooling to set that account's profile role to
+   `owner` directly in the database
 
 After that, your Moderate tab's User accounts section will show a queue
 of anyone who requests moderator access, with Approve/Deny buttons, and
