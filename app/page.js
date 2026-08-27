@@ -17,16 +17,30 @@ import { usePagination } from '../lib/usePagination';
 const VIEWS = ['active', 'resolved', 'following'];
 const CATEGORY_FILTERS = ['all', ...CATEGORIES];
 
+function RequestError({ title, onRetry }) {
+  return (
+    <div className="card" role="alert">
+      <h3>{title}</h3>
+      <p>The request failed. Check your connection and try again.</p>
+      <button type="button" className="btn outline" onClick={onRetry}>
+        Try again
+      </button>
+    </div>
+  );
+}
+
 export default function BrowsePage() {
   const user = useUser();
   const [suggestions, setSuggestions] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState(false);
   const [search, setSearch] = useState('');
   const [view, setView] = usePersistedFilter('browse-view', 'active', VIEWS);
   const [categoryFilters, setCategoryFilters] = usePersistedMultiFilter('browse-category-filters', ['all'], CATEGORY_FILTERS);
   const [categoryFiltersOpen, setCategoryFiltersOpen] = useState(() => !categoryFilters.includes('all'));
   const [myInterests, setMyInterests] = useState(new Set());
   const [followingReports, setFollowingReports] = useState(undefined);
+  const [followingError, setFollowingError] = useState(false);
   const [updatedIds, setUpdatedIds] = useState(new Set());
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
@@ -41,6 +55,7 @@ export default function BrowsePage() {
     } else if (user === null) {
       setMyInterests(new Set());
       setFollowingReports([]);
+      setFollowingError(false);
       setUpdatedIds(new Set());
     }
   }, [user]);
@@ -48,23 +63,37 @@ export default function BrowsePage() {
   // Loaded eagerly (not just when the Following pill is opened) so its
   // count and "Updated" dot are accurate as soon as Browse loads.
   async function loadFollowing() {
-    const { data: subs } = await supabase.rpc('get_my_subscriptions');
-    const ids = (subs || []).map((s) => s.suggestion_id);
-    setMyInterests(new Set(ids));
-    if (ids.length === 0) {
+    setFollowingReports(undefined);
+    setFollowingError(false);
+
+    try {
+      const { data: subs, error: subscriptionsError } = await supabase.rpc('get_my_subscriptions');
+      if (subscriptionsError) throw subscriptionsError;
+
+      const ids = (subs || []).map((s) => s.suggestion_id);
+      setMyInterests(new Set(ids));
+      if (ids.length === 0) {
+        setFollowingReports([]);
+        setUpdatedIds(new Set());
+        return;
+      }
+
+      const { data, error: reportsError } = await supabase
+        .from('suggestions')
+        .select('*, subscribers(count), report_images(url)')
+        .in('id', ids);
+      if (reportsError) throw reportsError;
+
+      const bySubscribedOrder = ids
+        .map((id) => (data || []).find((r) => r.id === id))
+        .filter(Boolean);
+      setFollowingReports(await attachReporterNames(bySubscribedOrder));
+      setUpdatedIds(new Set((subs || []).filter((s) => s.has_update).map((s) => s.suggestion_id)));
+    } catch (error) {
+      console.error('Failed to load followed reports:', error);
       setFollowingReports([]);
-      setUpdatedIds(new Set());
-      return;
+      setFollowingError(true);
     }
-    const { data } = await supabase
-      .from('suggestions')
-      .select('*, subscribers(count), report_images(url)')
-      .in('id', ids);
-    const bySubscribedOrder = ids
-      .map((id) => (data || []).find((r) => r.id === id))
-      .filter(Boolean);
-    setFollowingReports(await attachReporterNames(bySubscribedOrder));
-    setUpdatedIds(new Set((subs || []).filter((s) => s.has_update).map((s) => s.suggestion_id)));
   }
 
   // Shared by both the Active/Resolved cards and the Following cards, so
@@ -99,13 +128,24 @@ export default function BrowsePage() {
   }, [loaded]);
 
   async function loadSuggestions() {
-    const { data, error } = await supabase
-      .from('suggestions')
-      .select('*, subscribers(count), report_images(url)')
-      .in('status', ['approved', 'resolved'])
-      .order('submitted_at', { ascending: false });
-    if (!error) setSuggestions(await attachReporterNames(data || []));
-    setLoaded(true);
+    setLoaded(false);
+    setSuggestionsError(false);
+
+    try {
+      const { data, error } = await supabase
+        .from('suggestions')
+        .select('*, subscribers(count), report_images(url)')
+        .in('status', ['approved', 'resolved'])
+        .order('submitted_at', { ascending: false });
+      if (error) throw error;
+
+      setSuggestions(await attachReporterNames(data || []));
+    } catch (error) {
+      console.error('Failed to load reports:', error);
+      setSuggestionsError(true);
+    } finally {
+      setLoaded(true);
+    }
   }
 
   async function drawMap() {
@@ -199,7 +239,10 @@ export default function BrowsePage() {
 
         {view === 'following' ? (
           <>
-            {(user === undefined || followingReports === undefined) && <p className="hint">Loading…</p>}
+            {(user === undefined || followingReports === undefined) && !followingError && <p className="hint">Loading…</p>}
+            {user && followingError && (
+              <RequestError title="Couldn’t load followed reports" onRetry={loadFollowing} />
+            )}
             {user === null && (
               <div className="lock">
                 <h3>Not signed in</h3>
@@ -210,16 +253,17 @@ export default function BrowsePage() {
                 </div>
               </div>
             )}
-            {user && Array.isArray(followingReports) && followingReports.length === 0 && (
+            {user && !followingError && Array.isArray(followingReports) && followingReports.length === 0 && (
               <div className="empty">
                 You&apos;re not following any reports yet.<br />
                 Tap &quot;I&apos;m interested&quot; on a report to get updates here.
               </div>
             )}
-            {user && Array.isArray(followingReports) && followingReports.length > 0 && visibleFollowing.length === 0 && (
+            {user && !followingError && Array.isArray(followingReports) && followingReports.length > 0 && visibleFollowing.length === 0 && (
               <div className="empty">No followed reports match your search or category filters.</div>
             )}
             {user &&
+              !followingError &&
               page.visible.map((r) => (
                 <ReportCard
                   key={r.id}
@@ -229,30 +273,37 @@ export default function BrowsePage() {
                   onFollowingChange={(nowFollowing) => handleFollowingChange(r, nowFollowing)}
                 />
               ))}
-            {user && (
+            {user && !followingError && (
               <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
             )}
           </>
         ) : (
           <>
-            {loaded && visible.length === 0 && (
-              <div className="empty">
-                {search.trim()
-                  ? 'No reports match your search.'
-                  : view === 'active'
-                  ? <>No active reports yet.<br />Be the first to submit one.</>
-                  : 'No resolved reports yet.'}
-              </div>
+            {!loaded && <p className="hint">Loading…</p>}
+            {suggestionsError ? (
+              <RequestError title="Couldn’t load reports" onRetry={loadSuggestions} />
+            ) : (
+              <>
+                {loaded && visible.length === 0 && (
+                  <div className="empty">
+                    {search.trim()
+                      ? 'No reports match your search.'
+                      : view === 'active'
+                      ? <>No active reports yet.<br />Be the first to submit one.</>
+                      : 'No resolved reports yet.'}
+                  </div>
+                )}
+                {page.visible.map((s) => (
+                  <ReportCard
+                    key={s.id}
+                    report={s}
+                    following={myInterests.has(s.id)}
+                    onFollowingChange={(nowFollowing) => handleFollowingChange(s, nowFollowing)}
+                  />
+                ))}
+                <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
+              </>
             )}
-            {page.visible.map((s) => (
-              <ReportCard
-                key={s.id}
-                report={s}
-                following={myInterests.has(s.id)}
-                onFollowingChange={(nowFollowing) => handleFollowingChange(s, nowFollowing)}
-              />
-            ))}
-            <LoadMoreButton hasMore={page.hasMore} remaining={page.total - page.visible.length} onClick={page.loadMore} />
           </>
         )}
       </div>
