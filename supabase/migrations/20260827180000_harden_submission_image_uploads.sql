@@ -73,4 +73,3 @@ with check (
       and s.status in ('approved', 'resolved')
   )
 );
-
