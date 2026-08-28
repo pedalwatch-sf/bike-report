@@ -45,7 +45,10 @@ function daysPending(submittedAt) {
 const CSV_COLUMNS = ['id', 'title', 'category', 'status', 'description', 'lat', 'lng', 'submitted_at'];
 
 function toCsvValue(value) {
-  const s = String(value ?? '');
+  const raw = String(value ?? '');
+  // Spreadsheet programs evaluate leading formula characters when a CSV is
+  // opened. Prefix them with an apostrophe so user-provided fields remain text.
+  const s = /^[\t\r ]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
@@ -325,7 +328,7 @@ export default function ModeratePage() {
   async function addImage(suggestionId, file) {
     setMessage('');
     try {
-      const url = await uploadImage(file);
+      const url = await uploadImage(file, user.id);
       const { error } = await supabase.from('report_images').insert({ suggestion_id: suggestionId, url });
       if (error) setMessage(error.message);
     } catch (uploadError) {
