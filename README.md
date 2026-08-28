@@ -15,6 +15,14 @@ and deployed on Vercel.
   automatically on every push/PR via GitHub Actions (`.github/workflows/ci.yml`),
   alongside `npm run lint`, `npm run build`, and `npm audit --audit-level=high`
   on Node 22
+- **ESLint** (`npm run lint`, flat config in `eslint.config.mjs`) on
+  `eslint-config-next`. Two React Compiler diagnostics are tuned there, with
+  the reasoning inline: `react-hooks/immutability` is off (it only reports
+  hoisted `async function load*()` declarations, which is the shape every
+  page here uses), and `react-hooks/set-state-in-effect` is a warning rather
+  than an error -- CI doesn't fail on the existing "reset state when an input
+  changes" cases, but new ones stay visible, since that's the pattern behind
+  state-vs-props desync bugs
 - Plain CSS in `app/globals.css` (no CSS framework), dark theme, custom
   properties for color/radius/shadow tokens. The two accent colors are
   `--yellow` (`#f3af49`) and `--teal` (`#5982c0`, a complementary blue
@@ -334,6 +342,12 @@ afterward, so the repo always shows what's actually running.
   that touches only that one column and checks the caller's authorization
   itself. Internal trigger/audit helpers are explicitly revoked from API roles,
   while privileged user-facing RPCs are executable only by `authenticated`.
+  Those revokes are deliberate rather than incidental: Postgres grants EXECUTE
+  to `PUBLIC` by default on every newly created function, so a `SECURITY
+  DEFINER` helper is reachable at `/rest/v1/rpc/<name>` until that default is
+  actively taken away. Default execute privileges are revoked wholesale for
+  the `public` schema and then re-granted per function, so a new helper is
+  unreachable until someone grants it on purpose.
 - **Role hierarchy checks are relative, not hardcoded.** Authorization
   checks compare `role_level(caller) vs role_level(target)` rather than
   matching literal role strings, so adding the `owner` role above `admin`
@@ -345,9 +359,13 @@ afterward, so the repo always shows what's actually running.
   hook and rejects an authenticated request when the account has a verified MFA
   factor but the JWT assurance level is not `aal2`. That happens before direct
   table access or `SECURITY DEFINER` RPC execution, closing the earlier RPC
-  bypass. Restrictive RLS policies still require `aal2` on tables as
-  defense-in-depth. `user_has_verified_mfa` can only reveal enrollment for the
-  current authenticated user; API roles are not granted direct access to
+  bypass. It deliberately covers every authenticated request rather than only
+  the write paths the rate limiter guards, since the RPCs are exactly what
+  needed covering; the JWT's own `aal` claim is checked first so a session
+  that is already `aal2` never pays for the enrollment lookup. Restrictive RLS
+  policies still require `aal2` on tables as defense-in-depth.
+  `user_has_verified_mfa` can only reveal enrollment for the current
+  authenticated user; API roles are not granted direct access to
   `auth.mfa_factors`, which contains the TOTP factor data.
 - **Abuse protection on submissions and uploads.** The `submission-images`
   storage bucket only accepts uploads from signed-in, non-banned accounts
@@ -363,10 +381,14 @@ afterward, so the repo always shows what's actually running.
   (`public.check_request`, registered on the `authenticator` role) --
   the IP comes from `X-Forwarded-For`, which Supabase's edge proxy sets
   itself from the real connection, not something a client can spoof by
-  sending a fake header. Both the per-account and per-IP checks exempt
-  the `owner` role (via `is_owner()`, matching how every other privileged
-  check in this app is relative to role rather than a specific account)
-  so normal use/testing never trips them.
+  sending a fake header. If that header is ever absent or unparseable the
+  per-IP check is skipped rather than failing the request -- it used to cast
+  the empty string to `inet`, which raises rather than returning null, and
+  because this runs as the pre-request hook that turned into a 500 on the
+  entire submit flow, not just on the rate limiter. Both the per-account and
+  per-IP checks exempt the `owner` role (via `is_owner()`, matching how every
+  other privileged check in this app is relative to role rather than a
+  specific account) so normal use/testing never trips them.
   Sign-in and sign-up also render a Cloudflare Turnstile CAPTCHA widget
   (`lib/constants.js` -> `TURNSTILE_SITE_KEY`), wired to a real sitekey
   registered to the production domain. It only starts blocking anything

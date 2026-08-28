@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
 
@@ -11,7 +11,24 @@ export default function InterestButton({ suggestionId, count, following: initial
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Props seed this state, but only until the viewer acts on it themselves.
+  // Browse and the report page both resolve follow state asynchronously, so
+  // the first render can carry a stale following={false} that corrects a
+  // moment later -- that correction has to land. After the viewer toggles,
+  // though, the parent re-renders with its own updated `following` while
+  // `count` stays at whatever it loaded with (no caller refetches the
+  // subscriber count), so re-seeding then would revert the optimistic count
+  // the toggle just applied. Tracked per suggestion: reusing this component
+  // for a different report starts over from that report's props.
+  const syncedIdRef = useRef(suggestionId);
+  const viewerToggledRef = useRef(false);
+
   useEffect(() => {
+    if (syncedIdRef.current !== suggestionId) {
+      syncedIdRef.current = suggestionId;
+      viewerToggledRef.current = false;
+    }
+    if (viewerToggledRef.current) return;
     setFollowing(!!initiallyFollowing);
     setLocalCount(count);
   }, [suggestionId, initiallyFollowing, count]);
@@ -28,6 +45,7 @@ export default function InterestButton({ suggestionId, count, following: initial
       return;
     }
     const nowFollowing = !following;
+    viewerToggledRef.current = true;
     setFollowing(nowFollowing);
     setLocalCount((c) => c + (nowFollowing ? 1 : -1));
     onChange?.(nowFollowing);
