@@ -1097,4 +1097,3 @@ function LocationMap({ lat, lng, onChange }) {
 
   return <div ref={mapRef} className="edit-map" />;
 }
-
