@@ -6,7 +6,7 @@ import LoadMoreButton from '../../components/LoadMoreButton';
 import { supabase } from '../../lib/supabaseClient';
 import { useUser } from '../../lib/useUser';
 import { uploadImage } from '../../lib/uploadImage';
-import { matchesSearch } from '../../lib/searchReports';
+import { filterReports } from '../../lib/searchReports';
 import { roleLevel } from '../../lib/roles';
 import { SF_CENTER } from '../../lib/constants';
 import { DUPLICATE_RADIUS_METERS, haversineMeters } from '../../lib/geo';
@@ -374,10 +374,11 @@ export default function ModeratePage() {
 
   const isModOrAdmin = profile && roleLevel(profile.role) >= 2;
   const isAdmin = profile && roleLevel(profile.role) >= 3;
-  const visibleReports = reports
-    .filter((r) => statusFilter === 'all' || r.status === statusFilter)
-    .filter((r) => reportCategoryFilters.includes('all') || reportCategoryFilters.includes(r.category))
-    .filter((r) => matchesSearch(r, reportSearch));
+  const visibleReports = filterReports(
+    reports.filter((r) => statusFilter === 'all' || r.status === statusFilter),
+    reportSearch,
+    reportCategoryFilters
+  );
   const activeReportFilterCount =
     (statusFilter !== 'all' ? 1 : 0) + (reportCategoryFilters.includes('all') ? 0 : reportCategoryFilters.length);
   const visibleUsers = users

@@ -19,7 +19,6 @@ export default function Nav() {
   useEffect(() => {
     if (canModerate) loadPendingCount();
     else setPendingCount(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canModerate, pathname]);
 
   async function loadPendingCount() {
