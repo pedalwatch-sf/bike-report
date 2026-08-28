@@ -120,7 +120,7 @@ export default function SubmitPage() {
       let image_url = null;
       if (imageFile) {
         try {
-          image_url = await uploadImage(imageFile);
+          image_url = await uploadImage(imageFile, user.id);
         } catch (uploadError) {
           setMessage('Image upload failed: ' + uploadError.message);
           setSubmitting(false);
@@ -292,3 +292,4 @@ export default function SubmitPage() {
     </main>
   );
 }
+
