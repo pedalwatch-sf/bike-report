@@ -100,7 +100,7 @@ export default function ReportDetailPage(props) {
     let image_urls = null;
     if (changeImages.length > 0) {
       try {
-        image_urls = await Promise.all(changeImages.map(uploadImage));
+        image_urls = await Promise.all(changeImages.map((file) => uploadImage(file, user.id)));
       } catch (uploadError) {
         setSuggestingChange(false);
         setChangeError('Image upload failed: ' + uploadError.message);
@@ -231,3 +231,4 @@ export default function ReportDetailPage(props) {
     </main>
   );
 }
+
