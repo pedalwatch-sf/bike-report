@@ -12,10 +12,11 @@ import { dotIcon } from '../../lib/leafletDotIcon';
 import { CATEGORIES } from '../../lib/categories';
 
 async function findNearbyReports(lat, lng) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('suggestions')
     .select('id, title, lat, lng, category')
     .eq('status', 'approved');
+  if (error) throw new Error('Could not check nearby reports. Please try again.');
   return (data || []).filter(
     (r) =>
       r.lat != null &&
@@ -31,6 +32,12 @@ export default function SubmitPage() {
   const mapInstance = useRef(null);
   const markerRef = useRef(null);
   const submitLockRef = useRef(false);
+  const imageInputRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
+  const [mapAttempt, setMapAttempt] = useState(0);
+  const [locating, setLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState('');
 
   const [coords, setCoords] = useState(null);
   const [title, setTitle] = useState('');
@@ -43,19 +50,27 @@ export default function SubmitPage() {
   const [pendingDuplicates, setPendingDuplicates] = useState(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !profile || profile.banned) return;
+    let cancelled = false;
     let map;
     (async () => {
       const L = (await import('leaflet')).default;
+      if (cancelled || !mapRef.current) return;
+      setCoords(null);
+      setPendingDuplicates(null);
       map = L.map(mapRef.current, { scrollWheelZoom: false }).setView(SF_CENTER, 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
+      }).addTo(map).on('tileerror', () => { if (!cancelled) setMapError(true); });
 
+      mapInstance.current = map;
+      map.on('click', (e) => placePin(e.latlng, L, map));
+      setMapReady(true);
       const { data: approved } = await supabase
         .from('suggestions')
         .select('id, title, lat, lng')
         .eq('status', 'approved');
+      if (cancelled) return;
       (approved || []).forEach((r) => {
         if (r.lat != null && r.lng != null) {
           L.marker([r.lat, r.lng], { icon: dotIcon(L, 'var(--teal)') })
@@ -66,23 +81,49 @@ export default function SubmitPage() {
         }
       });
 
-      map.on('click', (e) => {
-        setCoords(e.latlng);
-        setPendingDuplicates(null);
-        if (markerRef.current) map.removeLayer(markerRef.current);
-        markerRef.current = L.marker(e.latlng, { icon: dotIcon(L, 'var(--yellow)') }).addTo(map);
-      });
-      mapInstance.current = map;
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          map.setView([pos.coords.latitude, pos.coords.longitude], 12);
-        }, () => {});
-      }
-    })();
+    })().catch(() => { if (!cancelled) setMapError(true); });
     return () => {
+      cancelled = true;
       if (map) map.remove();
+      mapInstance.current = null;
+      markerRef.current = null;
     };
-  }, [user]);
+  }, [user, profile, mapAttempt]);
+
+  function placePin(latlng, L, map) {
+    if (submitLockRef.current) return;
+    setCoords(latlng);
+    setPendingDuplicates(null);
+    if (markerRef.current) map.removeLayer(markerRef.current);
+    markerRef.current = L.marker(latlng, { icon: dotIcon(L, 'var(--yellow)') }).addTo(map);
+  }
+
+  async function pinMapCenter() {
+    const map = mapInstance.current;
+    if (!map) return;
+    const { default: L } = await import('leaflet');
+    if (mapInstance.current === map) placePin(map.getCenter(), L, map);
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) {
+      setLocationMessage('Location is unavailable. Pan the map and place a pin instead.');
+      return;
+    }
+    setLocating(true);
+    setLocationMessage('');
+    const requestedMap = mapInstance.current;
+    navigator.geolocation.getCurrentPosition((position) => {
+      if (mapInstance.current !== requestedMap) return;
+      setLocating(false);
+      mapInstance.current?.setView([position.coords.latitude, position.coords.longitude], 16);
+      setLocationMessage('Map centered on your location. Place a pin at the issue, which may be somewhere else.');
+    }, () => {
+      if (mapInstance.current !== requestedMap) return;
+      setLocating(false);
+      setLocationMessage('Could not get your location. Pan the map and place a pin instead.');
+    }, { timeout: 10000 });
+  }
 
   async function handleSubmit(skipDuplicateCheck = false) {
     // Synchronous guard against double-clicks/taps landing before React
@@ -90,6 +131,7 @@ export default function SubmitPage() {
     // brief window where a second click can still slip through.
     if (submitLockRef.current) return;
     submitLockRef.current = true;
+    setJustSubmitted(false);
     try {
       if (title.trim().toLowerCase() === 'kitten') {
         router.push('/kitten');
@@ -104,6 +146,8 @@ export default function SubmitPage() {
         return;
       }
 
+      setSubmitting(true);
+      setMessage('');
       if (!skipDuplicateCheck) {
         const nearby = await findNearbyReports(coords.lat, coords.lng);
         if (nearby.length > 0) {
@@ -112,10 +156,6 @@ export default function SubmitPage() {
         }
       }
       setPendingDuplicates(null);
-
-      setSubmitting(true);
-      setMessage('');
-      setJustSubmitted(false);
 
       let image_url = null;
       if (imageFile) {
@@ -142,31 +182,40 @@ export default function SubmitPage() {
         .select('id')
         .single();
 
-      setSubmitting(false);
       if (error) {
         setMessage('Something went wrong: ' + error.message);
         return;
       }
+      let imageWarning = '';
       if (image_url) {
-        await supabase.from('report_images').insert({ suggestion_id: inserted.id, url: image_url });
+        try {
+          const { error: imageError } = await supabase.from('report_images').insert({ suggestion_id: inserted.id, url: image_url });
+          if (imageError) throw imageError;
+        } catch {
+          imageWarning = ' Your report was saved, but the photo could not be attached. Please contact PedalWatch to add it; do not submit a duplicate.';
+        }
       }
-      setMessage('Submitted for review — thank you!');
+      setMessage('Submitted for community review. You can track it in your submissions.' + imageWarning);
       setJustSubmitted(true);
       setTitle('');
       setDescription('');
       setCategory(CATEGORIES[0]);
       setImageFile(null);
+      if (imageInputRef.current) imageInputRef.current.value = '';
       setCoords(null);
       if (markerRef.current && mapInstance.current) {
         mapInstance.current.removeLayer(markerRef.current);
         markerRef.current = null;
       }
+    } catch (error) {
+      setMessage(error.message || 'Something went wrong. Please try again.');
     } finally {
+      setSubmitting(false);
       submitLockRef.current = false;
     }
   }
 
-  if (user === undefined) {
+  if (user === undefined || (user && profile === undefined)) {
     return (
       <main>
         <div className="content"><p className="hint">Loading…</p></div>
@@ -204,49 +253,74 @@ export default function SubmitPage() {
     );
   }
 
+  if (!profile) {
+    return <main><div className="content"><div className="card" role="alert"><h1>Account unavailable</h1><p>We could not load your account. Reload the page to try again before submitting.</p><button className="btn" onClick={() => window.location.reload()}>Reload account</button></div></div></main>;
+  }
+
   return (
     <main>
       <div className="content">
-        <label>What needs improvement?</label>
+        <div className="form-intro"><p className="eyebrow">Make your route better</p><h1>Report a street issue</h1><p className="hint">A precise location and a clear description help the community understand what needs to change.</p></div>
+        <div className="form-section"><h2>01 / Describe the issue</h2>
+        <label htmlFor="issue-title">What needs improvement? <span className="hint">(required)</span></label>
         <input
+          id="issue-title"
+          disabled={submitting}
           type="text"
+          required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Missing lane on 5th & Oak"
         />
 
-        <label>Details</label>
+        <label htmlFor="issue-description">Details <span className="hint">(required)</span></label>
         <textarea
+          id="issue-description"
+          disabled={submitting}
+          required
+          aria-describedby="description-help"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="What's happening, and why it matters"
         />
 
-        <label>Category</label>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <p className="hint" id="description-help">Include the nearest intersection, what you observed, and how it affects people riding.</p>
+        <label htmlFor="issue-category">Category</label>
+        <select id="issue-category" disabled={submitting} value={category} onChange={(e) => setCategory(e.target.value)}>
           {CATEGORIES.map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>
 
-        <label>Photo (optional)</label>
+        <label htmlFor="issue-photo">Photo <span className="hint">(optional)</span></label>
         <input
+          id="issue-photo"
+          disabled={submitting}
+          ref={imageInputRef}
           type="file"
+          aria-describedby="photo-help"
           accept="image/*"
           onChange={(e) => setImageFile(e.target.files[0] || null)}
         />
 
-        <label>Location</label>
-        <div ref={mapRef} id="submitMap" />
+        <p className="hint" id="photo-help">Show the issue and its surroundings. Take photos from a safe place and avoid including identifying details about other people.</p>
+        </div>
+        <div className="form-section"><h2>02 / Pin the location</h2><p className="hint">Check the blue markers for existing reports before adding yours.</p>
+        <div ref={mapRef} id="submitMap" aria-label="Choose the issue location. Use arrow keys to pan, then the pin button below." />
+        {mapError && <div role="alert" className="hint">The map could not load. <button className="btn outline" disabled={submitting} onClick={() => { setMapReady(false); setMapError(false); setCoords(null); setLocating(false); setMapAttempt((value) => value + 1); }}>Retry map</button></div>}
+        <div className="row"><button type="button" className="btn outline" onClick={pinMapCenter} disabled={!mapReady || submitting}>Place pin at map center</button><button type="button" className="btn outline" onClick={locateMe} disabled={!mapReady || locating || submitting}>{locating ? 'Finding location…' : 'Use my location'}</button></div>
+        {locationMessage && <p className="hint" role="status">{locationMessage}</p>}
         <p className="hint">
           Tap the map to drop a pin at the location.{' '}
           <span style={{ color: 'var(--teal)' }}>●</span> existing approved reports ·{' '}
           <span style={{ color: 'var(--yellow)' }}>●</span> your new pin
         </p>
-        <div className="coords">
+        <div className="coords" role="status">
           {coords ? `Pin set: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : 'No pin placed yet'}
         </div>
 
+        </div>
+        <p className="submission-note"><strong>What happens next?</strong> A moderator reviews your report before it appears publicly. Submitting here does not automatically notify a city agency.</p>
         {pendingDuplicates && (
           <div className="card" style={{ marginTop: 18, borderColor: 'var(--coral)' }}>
             <h3>This might already be reported</h3>
@@ -278,7 +352,7 @@ export default function SubmitPage() {
           </div>
         )}
         {message && (
-          <p className="hint" style={{ marginTop: 10 }}>
+          <p className="hint" role={justSubmitted ? 'status' : 'alert'} style={{ marginTop: 10 }}>
             {message}
             {justSubmitted && (
               <>

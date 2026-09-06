@@ -27,16 +27,16 @@ export default function Nav() {
   }
 
   const tab = (href, label, showDot) => (
-    <Link href={href} className={`tab ${pathname === href ? 'active' : ''}`}>
+    <Link href={href} aria-current={pathname === href ? 'page' : undefined} className={`tab ${pathname === href ? 'active' : ''}`}>
       {label}
       {showDot && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
     </Link>
   );
 
   return (
-    <nav className="tabs">
-      {tab('/', 'Browse')}
-      {tab('/submit', 'Submit')}
+    <nav className="tabs" aria-label="Main navigation">
+      {tab('/', 'Explore reports')}
+      {tab('/submit', 'Report an issue')}
       {tab('/impact', 'Impact')}
       {canModerate && tab('/moderate', 'Moderate', pendingCount > 0)}
       {tab('/account', user ? 'Account' : 'Sign in')}

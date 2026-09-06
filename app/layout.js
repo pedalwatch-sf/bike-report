@@ -3,8 +3,8 @@ import SiteChrome from '../components/SiteChrome';
 import Footer from '../components/Footer';
 
 export const metadata = {
-  title: 'Project PedalWatch',
-  description: 'Community-submitted bike lane infrastructure reports',
+  title: 'PedalWatch | San Francisco bike infrastructure reports',
+  description: 'Explore community reports of bike infrastructure issues in San Francisco. Document a problem, follow progress, and help build a record for better streets.',
 };
 
 export default function RootLayout({ children }) {
