@@ -132,26 +132,17 @@ reports, suggest changes, or register interest.
 
 ## What's on each page
 
-- **Browse** (`/`) -- map centered on SF with a colored dot per report
-  (blue for active, yellow for resolved -- matching those status
-  badges' colors elsewhere); tapping a marker's popup links straight to
-  that report. A search box, then one pill row for Active / Resolved /
-  Following plus a Category toggle at the end of the same row; tapping
-  Category drops down a multi-select pill panel below (same pattern as
-  Moderate's account filters) instead of stacking a second permanent
-  pill row. All of it filters the same page in place and combines
-  together. Following lists every report you've
-  registered interest in, any status, with an "Updated" badge on ones
-  whose status changed or got a new progress-timeline entry since you
-  last opened them, and a small dot on the Following pill itself so you
-  notice without opening it first -- each clears individually once you
-  actually open that report, not all at once. Each report card shows
-  its photo, category, who reported it (links to their profile),
-  interest count, and an "I'm interested" toggle that asks for
-  confirmation before unfollowing. Active, resolved, and followed
-  reports load from Postgres in cursor-based pages of 20; search and
-  category filters run in the database before paging, so later matches
-  are never hidden behind an unloaded client-side slice.
+- **Browse** (`/`) -- a responsive map-and-reports workspace. Search,
+  status (Active / Resolved / Following), and multi-select category filters
+  apply to both the list and the map. Map markers represent the currently
+  loaded matching reports, with an explicit count and a prompt to load more
+  when additional results exist. “Fit reports” frames the loaded locations;
+  map errors have a retry action and never hide the report list. The map
+  preserves its viewport while results change and cleans up on navigation.
+  Report cards show photos, status, category, reporter, and interest controls.
+  Following retains per-report update badges that clear when a report is opened.
+  Reports load from Postgres in cursor-based pages of 20; search and category
+  filters run in the database before paging.
 - **Submit** (`/submit`) -- title, category, photo, and a click-to-pin
   map. The map also shows every existing approved report as a blue dot
   for context (its popup links to that report, opening in a new tab so
@@ -159,7 +150,11 @@ reports, suggest changes, or register interest.
   once you place one. Warns you before submitting if there's already an
   approved report within ~125m, in case it's a duplicate -- a card with
   links to the nearby report(s) and "Submit anyway" / "Cancel" buttons,
-  not a native browser popup. A synchronous lock stops a double-click or
+  not a native browser popup. The form includes accessible field labels,
+  keyboard-friendly map-center pin placement, explicit geolocation, and clear
+  moderation expectations. Failed duplicate checks stop submission; a failed
+  photo attachment after saving the report is reported as partial success.
+  A synchronous lock stops a double-click or
   slow tap from creating two rows. Submitting a report titled exactly
   "kitten" is a hidden shortcut -- see the easter egg section.
 - **Report detail** (`/report/[id]`) -- full photo gallery (horizontal
@@ -169,11 +164,11 @@ reports, suggest changes, or register interest.
   moderator-only), who reported it (links to their profile), an
   interest-follow toggle, and a "suggest a change" box for signed-in
   users on active reports.
-- **Impact** (`/impact`) -- public stat tiles (reports submitted, in
-  review, active, resolved) pulled from a `get_public_stats()` RPC that
-  returns aggregate counts only, so it can include pending/rejected
-  reports in the total without exposing their content to anonymous
-  visitors.
+- **Impact** (`/impact`) -- aggregate community totals from
+  `get_public_stats()` with loading, failure, and retry states. Explains the
+  distinction between a moderator marking a report resolved and an independently
+  verified repair. Describes the proposed report-to-action process and links to
+  official SF311/SFMTA request guidance. There is no automatic agency submission.
 - **Moderate** (`/moderate`) -- gated to moderator role and above, four
   tabs:
   - *Reports* -- search by title/description/category, plus a

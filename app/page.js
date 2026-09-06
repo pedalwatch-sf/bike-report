@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ReportCard from '../components/ReportCard';
 import LoadMoreButton from '../components/LoadMoreButton';
 import { supabase } from '../lib/supabaseClient';
 import { useUser } from '../lib/useUser';
-import { SF_CENTER } from '../lib/constants';
-import { escapeHtml } from '../lib/escapeHtml';
-import { dotIcon } from '../lib/leafletDotIcon';
+import Link from 'next/link';
+import ReportMap from '../components/ReportMap';
 import { CATEGORIES } from '../lib/categories';
 import { usePersistedFilter, usePersistedMultiFilter, toggleFilterValue } from '../lib/usePersistedFilter';
 import { useReportFeed } from '../lib/useReportFeed';
@@ -29,9 +28,6 @@ function RequestError({ title, onRetry }) {
 
 export default function BrowsePage() {
   const user = useUser();
-  const [mapSuggestions, setMapSuggestions] = useState([]);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [view, setView] = usePersistedFilter('browse-view', 'active', VIEWS);
@@ -41,17 +37,11 @@ export default function BrowsePage() {
   const [followingSubscriptions, setFollowingSubscriptions] = useState(undefined);
   const [followingError, setFollowingError] = useState(false);
   const [updatedIds, setUpdatedIds] = useState(new Set());
-  const mapRef = useRef(null);
-  const mapInstance = useRef(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 250);
     return () => window.clearTimeout(timer);
   }, [search]);
-
-  useEffect(() => {
-    loadMapSuggestions();
-  }, []);
 
   useEffect(() => {
     if (user) {
@@ -142,72 +132,23 @@ export default function BrowsePage() {
     }
   }
 
-  async function loadMapSuggestions() {
-    setMapLoaded(false);
-    setMapError(false);
-    const { data, error } = await supabase
-      .from('suggestions')
-      .select('id, title, status, lat, lng')
-      .in('status', ['approved', 'resolved'])
-      .order('submitted_at', { ascending: false });
-
-    if (error) {
-      console.error('Failed to load map markers:', error);
-      setMapSuggestions([]);
-      setMapError(true);
-    } else {
-      setMapSuggestions(data || []);
-    }
-    setMapLoaded(true);
-  }
-
-  useEffect(() => {
-    if (mapLoaded) drawMap();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapLoaded, mapSuggestions]);
-
-  async function drawMap() {
-    if (mapInstance.current) {
-      mapInstance.current.remove();
-      mapInstance.current = null;
-    }
-    const L = (await import('leaflet')).default;
-    const map = L.map(mapRef.current, { scrollWheelZoom: false }).setView(SF_CENTER, 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
-    mapSuggestions.forEach((suggestion) => {
-      if (suggestion.lat && suggestion.lng) {
-        const color = suggestion.status === 'resolved' ? 'var(--yellow)' : 'var(--teal)';
-        L.marker([suggestion.lat, suggestion.lng], { icon: dotIcon(L, color) })
-          .addTo(map)
-          .bindPopup(
-            `<b>${escapeHtml(suggestion.title)}</b><br/><a href="/report/${suggestion.id}" style="color:var(--teal)">View report →</a>`
-          );
-      }
-    });
-    mapInstance.current = map;
-  }
-
   const activeCategoryFilterCount = categoryFilters.includes('all') ? 0 : categoryFilters.length;
   const currentFeed = view === 'active' ? activeFeed : resolvedFeed;
+  const visibleFeed = view === 'following' ? followingFeed : currentFeed;
+  const hasFilters = Boolean(search || activeCategoryFilterCount);
+  function clearFilters() { setSearch(''); setCategoryFilters(['all']); }
 
   return (
     <main>
-      <div className="content">
-        <div ref={mapRef} id="map" />
-        <p className="hint" style={{ margin: '8px 0 14px' }}>
-          <span style={{ color: 'var(--teal)' }}>●</span> active · <span style={{ color: 'var(--yellow)' }}>●</span> resolved
-          {mapError && (
-            <>
-              {' · '}markers unavailable{' '}
-              <button type="button" className="btn outline" onClick={loadMapSuggestions} style={{ padding: '3px 8px' }}>
-                Retry
-              </button>
-            </>
-          )}
-        </p>
+      <div className="content browse-content">
+        <div className="workspace-heading">
+          <div><p className="eyebrow">The community street watch</p><h1>Better rides start here.</h1><p className="hint">Find an issue on your route. Follow its progress. Help improve the next ride.</p></div>
+          <Link href="/submit" className="btn">+ Report an issue</Link>
+        </div>
+        <section className="browse-controls" aria-label="Filter reports">
+        <label htmlFor="report-search" className="search-label">Find a street, issue, or category</label>
         <input
+          id="report-search"
           type="text"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -215,26 +156,28 @@ export default function BrowsePage() {
           aria-label="Search reports"
         />
         <div className="filter-row">
-          <button className={`filter-btn ${view === 'active' ? 'active' : ''}`} onClick={() => setView('active')}>
-            Active ({activeFeed.total})
+          <button className={`filter-btn ${view === 'active' ? 'active' : ''}`} aria-pressed={view === 'active'} onClick={() => setView('active')}>
+            Active ({activeFeed.loading ? '…' : activeFeed.error ? '—' : activeFeed.total})
           </button>
-          <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} onClick={() => setView('resolved')}>
-            Resolved ({resolvedFeed.total})
+          <button className={`filter-btn ${view === 'resolved' ? 'active' : ''}`} aria-pressed={view === 'resolved'} onClick={() => setView('resolved')}>
+            Resolved ({resolvedFeed.loading ? '…' : resolvedFeed.error ? '—' : resolvedFeed.total})
           </button>
-          <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} onClick={() => setView('following')}>
+          <button className={`filter-btn ${view === 'following' ? 'active' : ''}`} aria-pressed={view === 'following'} onClick={() => setView('following')}>
             Following{Array.isArray(followingSubscriptions) ? ` (${followingFeed.total})` : ''}
             {updatedIds.size > 0 && <span className="stat-dot" style={{ background: 'var(--coral)', marginLeft: 5 }} />}
           </button>
           <button
             type="button"
             className={`filter-btn ${categoryFiltersOpen ? 'active' : ''}`}
+            aria-expanded={categoryFiltersOpen}
+            aria-controls="category-filters"
             onClick={() => setCategoryFiltersOpen((open) => !open)}
           >
             Category{activeCategoryFilterCount > 0 && ` (${activeCategoryFilterCount})`}
           </button>
         </div>
         {categoryFiltersOpen && (
-          <div className="card">
+          <div className="card" id="category-filters">
             <div className="row" style={{ justifyContent: 'space-between' }}>
               <label style={{ margin: 0 }}>Category</label>
               {activeCategoryFilterCount > 0 && (
@@ -249,6 +192,7 @@ export default function BrowsePage() {
                   key={category}
                   type="button"
                   className={`filter-btn ${categoryFilters.includes(category) ? 'active' : ''}`}
+                  aria-pressed={categoryFilters.includes(category)}
                   onClick={() => setCategoryFilters((previous) => toggleFilterValue(previous, category))}
                 >
                   {category}
@@ -258,6 +202,15 @@ export default function BrowsePage() {
           </div>
         )}
 
+        {hasFilters && <button type="button" className="text-button" onClick={clearFilters}>Clear search &amp; categories</button>}
+        </section>
+        <div className="browse-workspace">
+          <aside className="browse-aside">
+            <ReportMap reports={visibleFeed.items} total={visibleFeed.total} loading={visibleFeed.loading} />
+            <div className="community-note"><p className="eyebrow">Every report is a starting point</p><p>Community reports make street problems visible. Review and follow-through help turn that evidence into action.</p><Link href="/impact">How reports can lead to change <span aria-hidden="true">↗</span></Link></div>
+          </aside>
+          <section className="report-results" aria-label="Matching reports" aria-busy={visibleFeed.loading}>
+            <div className="results-heading"><h2>{view === 'following' ? 'Your watchlist' : view === 'resolved' ? 'Resolved reports' : 'Needs attention'}</h2><span className="hint" role="status">{visibleFeed.loading ? 'Loading…' : visibleFeed.error ? 'Unavailable' : `${visibleFeed.total} reports`}</span></div>
         {view === 'following' ? (
           <>
             {(user === undefined || followingSubscriptions === undefined) && !followingError && (
@@ -320,7 +273,7 @@ export default function BrowsePage() {
                 {debouncedSearch || activeCategoryFilterCount > 0
                   ? 'No reports match your search or category filters.'
                   : view === 'active'
-                  ? <>No active reports yet.<br />Be the first to submit one.</>
+                  ? <>No active reports yet.<br /><Link className="btn" href="/submit">Report an issue</Link></>
                   : 'No resolved reports yet.'}
               </div>
             )}
@@ -340,6 +293,8 @@ export default function BrowsePage() {
             />
           </>
         )}
+          </section>
+        </div>
       </div>
     </main>
   );
